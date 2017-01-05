@@ -9,9 +9,8 @@ Gem::Specification.new do |spec|
   spec.authors       = ['Panoply Dev']
   spec.email         = ['dev@panoply.fm']
 
-  spec.summary       = %q{TODO: Write a short summary, because Rubygems requires one.}
-  spec.description   = %q{TODO: Write a longer description or delete this line.}
-  spec.homepage      = "TODO: Put your gem's website or public repo URL here."
+  spec.summary       = %q{Build Heroku-like slugs}
+  spec.homepage      = 'https://github.com/panoplymedia/slugbuilder'
   spec.license       = 'MIT'
 
   spec.files         = `git ls-files -z`.split("\x0").reject do |f|
