@@ -27,7 +27,7 @@ sb = Slugbuilder::Builder.new(repo: 'heroku/node-js-sample', git_ref: 'master')
 sb.build // builds the slug `heroku.node-js-sample.master.tgz` in the current directory
 ```
 
-### Builder#build
+### Builder#build(repo:, git_ref:, clear_cache:, env:)
 
 `build` builds the slug and writes build information to `STDOUT`.
 
