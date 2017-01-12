@@ -1,3 +1,4 @@
+require 'faraday'
 require 'securerandom'
 require 'shellwords'
 require 'yaml'
@@ -7,6 +8,7 @@ module Slugbuilder
   class Builder
     def initialize(repo:, git_ref:, clear_cache: false, app_env: {}, build_env: {})
       @base_dir = Slugbuilder.config.base_dir
+      @upload_url = Slugbuilder.config.upload_url
       @git_dir = Shellwords.escape("#{@base_dir}/git/#{repo}")
       @build_dir = Shellwords.escape("#{@base_dir}/#{repo}/#{git_ref}")
       @cache_dir = Shellwords.escape(Slugbuilder.config.cache_dir)
@@ -27,6 +29,7 @@ module Slugbuilder
       stitle("Build completed in #{@build_time} seconds")
       stext("Application compiled in #{@compile_time} seconds")
       stext("Slug compressed in #{@slug_time} seconds")
+      stext("Uploaded slug in #{@upload_time} seconds") if @upload_url
       return true
     rescue => e
       stitle("Failed to create slug: #{e}")
@@ -49,6 +52,7 @@ module Slugbuilder
         @slug_time = realtime { build_slug }
         slug_size
         print_workers
+        @upload_time = realtime { upload_slug } if @upload_url
       end
     end
 
@@ -193,6 +197,18 @@ module Slugbuilder
         rc = run_echo("tar --exclude='.git' #{compression} -C #{@build_dir} -cf #{@slug_file} .")
       end
       fail "Couldn't create slugfile" if rc != 0
+    end
+
+    def upload_slug
+      stitle("Uploading slug to #{@upload_url}")
+
+      conn = Faraday.new do |f|
+        f.request :multipart
+        f.adapter :em_http
+      end
+
+      response = conn.put(@upload_url, Faraday::UploadIO.new(@slug_file, 'application/x-gzip'))
+      fail unless response.status.between?(200, 300)
     end
 
     def slug_size

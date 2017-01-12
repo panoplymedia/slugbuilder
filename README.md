@@ -55,7 +55,11 @@ Slugbuilder.config.cache_dir = '/tmp/slugbuilder-cache'
 ```ruby
 @base_dir = '/tmp/slugbuilder'
 @cache_dir = '/tmp/slugbuilder-cache'
-@buildpacks = ['https://github.com/heroku/heroku-buildpack-nodejs.git', 'https://github.com/heroku/heroku-buildpack-ruby.git#37ed188']
+@buildpacks = [
+  'https://github.com/heroku/heroku-buildpack-nodejs.git',
+  'https://github.com/heroku/heroku-buildpack-ruby.git#37ed188'
+]
+@upload_url = "http://uploader.example.com
 ```
 
 **base_dir**
@@ -75,6 +79,12 @@ This is the directory where the cache lives.
 Buildpacks is an array of valid git clone-able [buildpack](https://devcenter.heroku.com/articles/buildpacks) URLs.
 
 > Defaults to []
+
+**upload_url**
+
+Uploads slug to URL if defined.
+
+> Defaults to nil
 
 ## Development
 
