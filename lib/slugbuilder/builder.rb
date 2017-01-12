@@ -108,8 +108,9 @@ module Slugbuilder
     end
 
     def copy_app
-      files = Dir.glob("#{@app_dir}/**").reject { |file| file.start_with?('.git') }
-      FileUtils.cp_r(files, @build_dir, preserve: true)
+      # copy dotfiles but not .git, ., or ..
+      files = Dir.glob("#{@app_dir}/**", File::FNM_DOTMATCH).reject { |file| file =~ /\.git|\.$|\.\.$/ }
+      FileUtils.cp_r(files, @build_dir)
     end
 
     def set_buildpack
