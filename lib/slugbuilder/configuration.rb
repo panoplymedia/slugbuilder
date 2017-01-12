@@ -16,12 +16,12 @@ module Slugbuilder
   end
 
   class Configuration
-    attr_accessor :base_dir, :cache_dir, :buildpack_dir
+    attr_accessor :base_dir, :cache_dir, :buildpacks
 
     def initialize
       @base_dir = '/tmp/slugbuilder'
       @cache_dir = '/tmp/slugbuilder-cache'
-      @buildpack_dir = 'buildpacks'
+      @buildpacks = []
     end
   end
 end

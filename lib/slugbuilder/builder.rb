@@ -7,10 +7,10 @@ module Slugbuilder
   class Builder
     def initialize(repo:, git_ref:, clear_cache: false, app_env: {}, build_env: {})
       @base_dir = Slugbuilder.config.base_dir
-      @app_dir = Shellwords.escape("#{@base_dir}/git/#{repo}")
+      @git_dir = Shellwords.escape("#{@base_dir}/git/#{repo}")
       @build_dir = Shellwords.escape("#{@base_dir}/#{repo}/#{git_ref}")
-      @cache_dir = Slugbuilder.config.cache_dir
-      @buildpack_dir = Slugbuilder.config.buildpack_dir
+      @cache_dir = Shellwords.escape(Slugbuilder.config.cache_dir)
+      @buildpacks_dir = "#{@cache_dir}/buildpacks"
       @slug_file = Shellwords.escape("#{repo.gsub('/', '.')}.#{git_ref}.tgz")
       @app_env = app_env
       @repo = repo
@@ -37,17 +37,14 @@ module Slugbuilder
     private
 
     def wipe_cache
-      FileUtils.rm_rf(@app_dir)
-      FileUtils.rm_rf(@build_dir)
       FileUtils.rm_rf(@cache_dir)
     end
 
     def build_and_release
       @build_time = realtime do
         set_environment
-        set_buildpack
-        @compile_time = realtime { compile }
-        release
+        buildpacks = fetch_buildpacks
+        run_buildpacks(buildpacks)
         profile_extras
         @slug_time = realtime { build_slug }
         slug_size
@@ -57,10 +54,8 @@ module Slugbuilder
 
     def setup
       @setup_time = realtime do
-        unless Dir.exist?(@app_dir)
-          create_dirs
-          download_repo
-        end
+        create_dirs
+        download_repo unless Dir.exist?(@git_dir)
         checkout_git_ref
 
         stext("Saving application to #{@build_dir}")
@@ -93,13 +88,16 @@ module Slugbuilder
 
     def create_dirs
       FileUtils.mkdir_p(@base_dir)
-      FileUtils.mkdir_p(@cache_dir)
+      FileUtils.mkdir_p(File.join(@cache_dir, 'buildpacks'))
+      # clear old build
+      FileUtils.rm_rf(@build_dir)
       FileUtils.mkdir_p(File.join(@build_dir, '.profile.d'))
     end
 
     def checkout_git_ref
-      Dir.chdir(@app_dir) do
+      Dir.chdir(@git_dir) do
         # checkout branch or sha
+        # get branch from origin so it is always the most recent
         rc = run("git fetch --all && (git checkout origin/#{@git_ref} || git checkout #{@git_ref})")
         fail "Failed to fetch and checkout: #{@git_ref}" if rc != 0
       end
@@ -107,50 +105,74 @@ module Slugbuilder
 
     def download_repo
       stitle("Fetching #{@repo}")
-      rc = run_echo("git clone git@github.com:#{@repo}.git #{@app_dir}")
+      rc = run_echo("git clone git@github.com:#{@repo}.git #{@git_dir}")
       fail "Failed to download repo: #{@repo}" if rc != 0
     end
 
     def copy_app
       # copy dotfiles but not .git, ., or ..
-      files = Dir.glob("#{@app_dir}/**", File::FNM_DOTMATCH).reject { |file| file =~ /\.git|\.$|\.\.$/ }
+      files = Dir.glob("#{@git_dir}/**", File::FNM_DOTMATCH).reject { |file| file =~ /\.git|\.$|\.\.$/ }
       FileUtils.cp_r(files, @build_dir)
     end
 
-    def set_buildpack
-      buildpack = nil
+    def get_buildpack_name(url)
+      url.match(/.+\/(.+?)\.git$/)[1]
+    end
 
-      if @build_env.key?('BUILDPACK_URL')
-        stitle('Fetching custom buildpack')
-        rc = run("git clone --depth=1 #{Shellwords.escape(@build_env['BUILDPACK_URL'])} #{@buildpack_dir}/00-custom")
-        fail "Failed to download custom buildpack: #{@build_env['BUILDPACK_URL']}" if rc != 0
-      end
+    def fetch_buildpacks
+      buildpacks = Slugbuilder.config.buildpacks
+      buildpacks << Shellwords.escape(@build_env['BUILDPACK_URL']) if @build_env.key?('BUILDPACK_URL')
+      fail 'Could not detect buildpack' if buildpacks.size.zero?
 
-      Dir["#{@buildpack_dir}/**"].each do |file|
-        if run("#{file}/bin/detect #{@build_dir}") == 0
-          buildpack = file
-          break
+      existing_buildpacks = Dir.entries(@buildpacks_dir)
+      buildpacks.each do |buildpack_url|
+        buildpack_name = get_buildpack_name(buildpack_url)
+        if !existing_buildpacks.include?(buildpack_name)
+          # download buildpack
+          stitle("Fetching buildpack: #{buildpack_name}")
+          rc = run("git clone --depth=1 #{buildpack_url} #{@buildpacks_dir}/#{buildpack_name}")
+          fail "Failed to download buildpack: #{buildpack_name}" if rc != 0
+        else
+          # fetch latest
+          stitle("Updating buildpack: #{buildpack_name}")
+          Dir.chdir("#{@buildpacks_dir}/#{buildpack_name}") do
+            rc = run('git pull')
+            fail "Failed to update: #{buildpack_name}" if rc != 0
+          end
         end
       end
-      fail "Could not detect buildpack" unless buildpack
 
-      @buildpack = buildpack
+      buildpacks
     end
 
-    def compile
-      rc = run_echo("#{@buildpack}/bin/compile '#{@build_dir}' '#{@cache_dir}'")
-      fail "Couldn't compile application using buildpack #{@buildpack}" if rc != 0
+    def run_buildpacks(buildpacks)
+      @compile_time = 0
+
+      buildpacks.each do |buildpack_url|
+        buildpack_name = get_buildpack_name(buildpack_url)
+        buildpack = "#{@buildpacks_dir}/#{buildpack_name}"
+        if run("#{buildpack}/bin/detect #{@build_dir}") == 0
+          @compile_time += realtime { compile(buildpack) }
+          release(buildpack)
+        end
+      end
+
     end
 
-    def release
+    def compile(buildpack)
+      rc = run_echo("#{buildpack}/bin/compile '#{@build_dir}' '#{@cache_dir}'")
+      fail "Couldn't compile application using buildpack #{buildpack}" if rc != 0
+    end
+
+    def release(buildpack)
       # should create .release
-      release_file = File.open("#{@build_dir}/.release", "w")
-      rc = run("#{@buildpack}/bin/release '#{@build_dir}' '#{@cache_dir}'") do |line|
+      release_file = File.open("#{@build_dir}/.release", 'w')
+      rc = run("#{buildpack}/bin/release '#{@build_dir}' '#{@cache_dir}'") do |line|
         release_file.print(line)
       end
       release_file.close
 
-      fail "Couldn't compile application using buildpack #{@buildpack}" if rc != 0
+      fail "Couldn't compile application using buildpack #{buildpack}" if rc != 0
     end
 
     def profile_extras
