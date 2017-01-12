@@ -76,8 +76,8 @@ module Slugbuilder
       load_env_file("#{@cache_dir}/env")
       load_env_file("#{@build_dir}/.env")
 
-      ENV['HOME'] = '/app'
-      ENV['APP_DIR'] = '/app'
+      ENV['HOME'] = @build_dir
+      ENV['APP_DIR'] = @build_dir
       ENV['STACK'] = 'cedar-14'
       # ENV['REQUEST_ID'] = @request_id
 
