@@ -1,6 +1,7 @@
 require 'securerandom'
 require 'shellwords'
 require 'yaml'
+require 'fileutils'
 
 module Slugbuilder
   class Builder
