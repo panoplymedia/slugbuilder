@@ -5,16 +5,17 @@ require 'fileutils'
 
 module Slugbuilder
   class Builder
-    def initialize(repo:, git_ref:, clear_cache: false, env: {})
+    def initialize(repo:, git_ref:, clear_cache: false, app_env: {}, build_env: {})
       @base_dir = Slugbuilder.config.base_dir
       @app_dir = Shellwords.escape("#{@base_dir}/git/#{repo}")
       @build_dir = Shellwords.escape("#{@base_dir}/#{repo}/#{git_ref}")
       @cache_dir = Slugbuilder.config.cache_dir
       @buildpack_dir = Slugbuilder.config.buildpack_dir
       @slug_file = Shellwords.escape("#{repo.gsub('/', '.')}.#{git_ref}.tgz")
-      @extra_env = env
+      @app_env = app_env
       @repo = repo
       @git_ref = git_ref
+      @build_env = build_env
 
       wipe_cache if clear_cache
       setup
@@ -27,7 +28,6 @@ module Slugbuilder
       stext("Application compiled in #{@compile_time} seconds")
       stext("Slug compressed in #{@slug_time} seconds")
       return true
-
     rescue => e
       stitle("Failed to create slug: #{e}")
       return false
@@ -76,14 +76,17 @@ module Slugbuilder
     def set_environment
       load_env_file("#{@cache_dir}/env")
       load_env_file("#{@build_dir}/.env")
+      ENV['STACK'] = 'cedar-14'
+
+      @app_env.merge(@build_env).each do |k, v|
+        ENV[k.to_s] = v.to_s
+      end
 
       ENV['HOME'] = @build_dir
       ENV['APP_DIR'] = @build_dir
-      ENV['STACK'] = 'cedar-14'
-      # ENV['REQUEST_ID'] = @request_id
 
       stitle('Build environment')
-      ENV.each do |k,v|
+      ENV.each do |k, v|
         stext("#{k}=#{v}")
       end
     end
@@ -117,10 +120,10 @@ module Slugbuilder
     def set_buildpack
       buildpack = nil
 
-      if @extra_env.key?('BUILDPACK_URL')
+      if @build_env.key?('BUILDPACK_URL')
         stitle('Fetching custom buildpack')
-        rc = run("git clone --depth=1 #{Shellwords.escape(@extra_env['BUILDPACK_URL'])} #{@buildpack_dir}/00-custom")
-        fail "Failed to download custom buildpack: #{@extra_env['BUILDPACK_URL']}" if rc != 0
+        rc = run("git clone --depth=1 #{Shellwords.escape(@build_env['BUILDPACK_URL'])} #{@buildpack_dir}/00-custom")
+        fail "Failed to download custom buildpack: #{@build_env['BUILDPACK_URL']}" if rc != 0
       end
 
       Dir["#{@buildpack_dir}/**"].each do |file|
@@ -152,7 +155,7 @@ module Slugbuilder
 
     def profile_extras
       File.open("#{@build_dir}/.profile.d/98extra.sh", 'w') do |file|
-        @extra_env.each do |k,v|
+        @app_env.each do |k,v|
           file.puts("export #{Shellwords.escape(k)}=#{Shellwords.escape(v)}")
         end
       end
@@ -231,7 +234,7 @@ module Slugbuilder
           next if parts.length != 2
 
           ENV[parts[0]] = parts[1]
-          @extra_env[parts[0]] = parts[1]
+          @app_env[parts[0]] = parts[1]
         end
       end
     end

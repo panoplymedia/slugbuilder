@@ -27,14 +27,15 @@ sb = Slugbuilder::Builder.new(repo: 'heroku/node-js-sample', git_ref: 'master')
 sb.build // builds the slug `heroku.node-js-sample.master.tgz` in the current directory
 ```
 
-### Builder#build(repo:, git_ref:, clear_cache:, env:)
+### Builder#build(repo:, git_ref:, clear_cache:, app_env:, build_env:)
 
 `build` builds the slug and writes build information to `STDOUT`.
 
 - `repo` String (required): the github repo in the form `<organization>/<repository>`
 - `git_ref` String (required): the SHA or branch to build
 - `clear_cache` Boolean: destroys the cache before building when true
-- `env` Hash: an optional hash of environment variables
+- `app_env` Hash: an optional hash of environment variables used in your build and when your app is run
+- `build_env` Hash: an optional hash of environment variables used in your build
 
 ## Configuration
 
