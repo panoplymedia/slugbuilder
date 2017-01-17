@@ -136,6 +136,7 @@ Slugbuilder.config.output_dir = './slugs'
 @base_dir = '/tmp/slugbuilder'
 @cache_dir = '/tmp/slugbuilder-cache'
 @output_dir = './slugs'
+@git_service = 'github.com'
 @buildpacks = [
   'https://github.com/heroku/heroku-buildpack-nodejs.git',
   'https://github.com/heroku/heroku-buildpack-ruby.git#37ed188'
@@ -159,6 +160,12 @@ This is the directory where the cache lives.
 This is where slug files are built to.
 
 > Defaults to `.` (the current directory)
+
+**git_service**
+
+This is where the git repositories live (github.com, gitlab.com, bitbucket.org, etc)
+
+> Defaults to `github.com`
 
 **buildpacks**
 

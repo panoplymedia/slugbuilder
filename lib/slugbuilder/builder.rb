@@ -124,7 +124,7 @@ module Slugbuilder
 
     def download_repo
       stitle("Fetching #{@repo}")
-      rc = run_echo("git clone git@github.com:#{@repo}.git #{@git_dir}")
+      rc = run_echo("git clone git@#{Slugbuilder.config.git_service}:#{@repo}.git #{@git_dir}")
       fail "Failed to download repo: #{@repo}" if rc != 0
     end
 
