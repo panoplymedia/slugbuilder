@@ -22,19 +22,89 @@ Or install it yourself as:
 
 ## Usage
 
+### Basic Usage
+
 ```ruby
+# basic
 sb = Slugbuilder::Builder.new(repo: 'heroku/node-js-sample', git_ref: 'master')
-sb.build // builds the slug `heroku.node-js-sample.master.tgz` in the current directory
+sb.build # builds the slug `heroku.node-js-sample.master.tgz` in the current directory
 ```
 
-### Builder#build(repo:, git_ref:, clear_cache:, env:)
+### Setting Build Environment
 
-`build` builds the slug and writes build information to `STDOUT`.
+```ruby
+# with environment variables
+sb = Slugbuilder::Builder.new(repo: 'heroku/node-js-sample', git_ref: 'master')
+sb.build(env: {NODE_ENV: 'production', SETTING: 'something'})
+```
+
+### Build without Cache
+
+```ruby
+# clear cache
+sb = Slugbuilder::Builder.new(repo: 'heroku/node-js-sample', git_ref: 'master')
+sb.build(clear_cache: true)
+```
+
+### Prebuild/Postbuild Hooks
+
+```ruby
+# prebuild/postbuild
+# using a Proc or Proc-like object (responds to `call` method)
+sb = Slugbuilder::Builder.new(repo: 'heroku/node-js-sample', git_ref: 'master')
+class PostBuildInterface
+  def self.call(repo:, git_ref:, stats:, slug:)
+    # postbuild logic
+  end
+end
+sb.build(prebuild: ->(repo: repo, git_ref: git_ref) { p "prebuild logic" }, postbuild: PostBuildInterface)
+
+# prebuild/postbuild with optional blocks
+sb = Slugbuilder::Builder.new(repo: 'heroku/node-js-sample', git_ref: 'master') do |args|
+  # prebuild logic
+  p args[:repo]
+end
+sb.build(env: {}) do |args|
+  # postbuild logic
+  p args[:slug]
+end
+```
+
+## API
+
+### Builder#initialize(repo:, git_ref:, &block)
 
 - `repo` String (required): the github repo in the form `<organization>/<repository>`
 - `git_ref` String (required): the SHA or branch to build
+- `block` Block: an optional block that runs pre-build. It receives a Hash with the structure:
+  - `repo` String: The git repo identifier
+  - `git_ref` String: The git branchname or SHA
+
+Alternatively, a Proc can be passed to `build` method's keyword argument `prebuild` to achieve the same effect.
+
+### Builder#build(clear_cache: false, env: {}, prebuild: nil, postbuild: nil, &block)
+
+`build` builds the slug and writes build information to `STDOUT`.
+
 - `clear_cache` Boolean: destroys the cache before building when true
 - `env` Hash: an optional hash of environment variables
+- `prebuild` Proc: an optional Proc (or anything that conforms to the `call` API of a Proc) that will be run before the build. The Proc will receive a Hash with the structure:
+  - `repo` String: The git repo identifier
+  - `git_ref` String: The git branchname or SHA
+Alternatively, a block can be passed to the `initialize` method to the same effect.
+- `postbuild` Proc: an optional Proc (or anything that conforms to the `call` API of a Proc) that will run post-build. The Proc will receive a Hash with the structure:
+  - `slug` String: Location of the built slug file
+  - `repo` String: The git repo identifier
+  - `git_ref` String: The git branchname or SHA
+  - `stats` Hash:
+    - setup `Float`: Amount of time spent in setup
+    - build `Float`: Total amount of time spent in build (compile/build/slug)
+    - compile `Float`: Amount of time spent in buildpack compilation
+    - slug `Float`: Amount of time compressing the slug
+    - output `String`: Build output to STDOUT
+
+Alternatively, a block can be passed to this method to the same effect. (see below)
+- `block` Block: an optional block that can be used as an alternative to the `postbuild` Proc argument. This receives the same arguments as `postbuild` (see above)
 
 ## Configuration
 
@@ -58,7 +128,6 @@ Slugbuilder.config.cache_dir = '/tmp/slugbuilder-cache'
   'https://github.com/heroku/heroku-buildpack-nodejs.git',
   'https://github.com/heroku/heroku-buildpack-ruby.git#37ed188'
 ]
-@upload_url = "http://uploader.example.com
 ```
 
 **base_dir**
@@ -78,12 +147,6 @@ This is the directory where the cache lives.
 Buildpacks is an array of valid git clone-able [buildpack](https://devcenter.heroku.com/articles/buildpacks) URLs.
 
 > Defaults to []
-
-**upload_url**
-
-Uploads slug to URL if defined.
-
-> Defaults to nil
 
 ## Development
 

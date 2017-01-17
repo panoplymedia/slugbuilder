@@ -1,4 +1,3 @@
-require 'faraday'
 require 'securerandom'
 require 'shellwords'
 require 'yaml'
@@ -6,29 +5,48 @@ require 'fileutils'
 
 module Slugbuilder
   class Builder
-    def initialize(repo:, git_ref:, clear_cache: false, env: {})
+    def initialize(repo:, git_ref:)
+      @build_output = []
       @base_dir = Slugbuilder.config.base_dir
-      @upload_url = Slugbuilder.config.upload_url
-      @git_dir = Shellwords.escape("#{@base_dir}/git/#{repo}")
-      @build_dir = Shellwords.escape("#{@base_dir}/#{repo}/#{git_ref}")
       @cache_dir = Shellwords.escape(Slugbuilder.config.cache_dir)
       @buildpacks_dir = "#{@cache_dir}/buildpacks"
-      @slug_file = Shellwords.escape("#{repo.gsub('/', '.')}.#{git_ref}.tgz")
-      @env = env
       @repo = repo
       @git_ref = git_ref
+      @git_dir = Shellwords.escape("#{@base_dir}/git/#{repo}")
+      @build_dir = Shellwords.escape("#{@base_dir}/#{repo}/#{git_ref}")
+      @slug_file = Shellwords.escape("#{repo.gsub('/', '.')}.#{git_ref}.tgz")
 
-      wipe_cache if clear_cache
       setup
+
+      if block_given?
+        yield(repo: repo, git_ref: git_ref)
+      end
     end
 
-    def build
+    def build(clear_cache: false, env: {}, prebuild: nil, postbuild: nil)
+      @build_output = []
+      @env = env
+      wipe_cache if clear_cache
+
+      prebuild.call(repo: @repo, git_ref: @git_ref) if prebuild
+
       build_and_release
       stitle("Setup completed in #{@setup_time} seconds")
       stitle("Build completed in #{@build_time} seconds")
       stext("Application compiled in #{@compile_time} seconds")
       stext("Slug compressed in #{@slug_time} seconds")
-      stext("Uploaded slug in #{@upload_time} seconds") if @upload_url
+      stats = {
+        setup: @setup_time,
+        build: @build_time,
+        compile: @compile_time,
+        slug: @slug_time,
+        output: @build_output.join('')
+      }
+
+      postbuild.call(repo: @repo, git_ref: @git_ref, stats: stats, slug: File.join(@output_dir, @slug_file)) if postbuild
+      if block_given?
+        yield(repo: @repo, git_ref: @git_ref, stats: stats, slug: File.join(@output_dir, @slug_file))
+      end
       return true
     rescue => e
       stitle("Failed to create slug: #{e}")
@@ -50,7 +68,6 @@ module Slugbuilder
         @slug_time = realtime { build_slug }
         slug_size
         print_workers
-        @upload_time = realtime { upload_slug } if @upload_url
       end
     end
 
@@ -185,18 +202,6 @@ module Slugbuilder
       fail "Couldn't create slugfile" if rc != 0
     end
 
-    def upload_slug
-      stitle("Uploading slug to #{@upload_url}")
-
-      conn = Faraday.new do |f|
-        f.request :multipart
-        f.adapter :em_http
-      end
-
-      response = conn.put(@upload_url, Faraday::UploadIO.new(@slug_file, 'application/x-gzip'))
-      fail unless response.status.between?(200, 300)
-    end
-
     def slug_size
       @slug_size = File.size(@slug_file) / 1024 / 1024
       stitle("Slug size is #{@slug_size} Megabytes.")
@@ -218,10 +223,12 @@ module Slugbuilder
     end
 
     def stitle(line)
+      @build_output << "-----> #{line}"
       STDOUT.puts("-----> #{line}")
     end
 
     def stext(line)
+      @build_output << "       #{line}"
       STDOUT.puts("       #{line}")
     end
 
@@ -243,6 +250,7 @@ module Slugbuilder
 
     def run_echo(cmd)
       run(cmd) do |line|
+        @build_output << line
         STDOUT.print(line)
       end
     end
