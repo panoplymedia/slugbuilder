@@ -6,7 +6,7 @@ require 'fileutils'
 
 module Slugbuilder
   class Builder
-    def initialize(repo:, git_ref:, clear_cache: false, app_env: {}, build_env: {})
+    def initialize(repo:, git_ref:, clear_cache: false, env: {})
       @base_dir = Slugbuilder.config.base_dir
       @upload_url = Slugbuilder.config.upload_url
       @git_dir = Shellwords.escape("#{@base_dir}/git/#{repo}")
@@ -14,10 +14,9 @@ module Slugbuilder
       @cache_dir = Shellwords.escape(Slugbuilder.config.cache_dir)
       @buildpacks_dir = "#{@cache_dir}/buildpacks"
       @slug_file = Shellwords.escape("#{repo.gsub('/', '.')}.#{git_ref}.tgz")
-      @app_env = app_env
+      @env = env
       @repo = repo
       @git_ref = git_ref
-      @build_env = build_env
 
       wipe_cache if clear_cache
       setup
@@ -48,7 +47,6 @@ module Slugbuilder
         set_environment
         buildpacks = fetch_buildpacks
         run_buildpacks(buildpacks)
-        profile_extras
         @slug_time = realtime { build_slug }
         slug_size
         print_workers
@@ -76,10 +74,6 @@ module Slugbuilder
       load_env_file("#{@cache_dir}/env")
       load_env_file("#{@build_dir}/.env")
       ENV['STACK'] = 'cedar-14'
-
-      @app_env.merge(@build_env).each do |k, v|
-        ENV[k.to_s] = v.to_s
-      end
 
       ENV['HOME'] = @build_dir
       ENV['APP_DIR'] = @build_dir
@@ -125,7 +119,7 @@ module Slugbuilder
 
     def fetch_buildpacks
       buildpacks = Slugbuilder.config.buildpacks
-      buildpacks << Shellwords.escape(@build_env['BUILDPACK_URL']) if @build_env.key?('BUILDPACK_URL')
+      buildpacks << Shellwords.escape(@env['BUILDPACK_URL']) if @env.key?('BUILDPACK_URL')
       fail 'Could not detect buildpack' if buildpacks.size.zero?
 
       existing_buildpacks = Dir.entries(@buildpacks_dir)
@@ -177,14 +171,6 @@ module Slugbuilder
       release_file.close
 
       fail "Couldn't compile application using buildpack #{buildpack}" if rc != 0
-    end
-
-    def profile_extras
-      File.open("#{@build_dir}/.profile.d/98extra.sh", 'w') do |file|
-        @app_env.each do |k,v|
-          file.puts("export #{Shellwords.escape(k)}=#{Shellwords.escape(v)}")
-        end
-      end
     end
 
     def build_slug
@@ -272,7 +258,7 @@ module Slugbuilder
           next if parts.length != 2
 
           ENV[parts[0]] = parts[1]
-          @app_env[parts[0]] = parts[1]
+          @env[parts[0]] = parts[1]
         end
       end
     end
