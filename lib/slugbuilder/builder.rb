@@ -153,7 +153,7 @@ module Slugbuilder
           fail "Failed to download buildpack: #{buildpack_name}" if rc != 0
         else
           # fetch latest
-          stitle("Updating buildpack: #{buildpack_name}")
+          stitle("Using cached buildpack. Ensuring latest version of buildpack: #{buildpack_name}")
           Dir.chdir("#{@buildpacks_dir}/#{buildpack_name}") do
             rc = run('git pull')
             fail "Failed to update: #{buildpack_name}" if rc != 0
@@ -169,7 +169,7 @@ module Slugbuilder
 
       buildpacks.each do |buildpack_url|
         buildpack_name = get_buildpack_name(buildpack_url)
-        buildpack = "#{@buildpacks_dir}/#{buildpack_name}"
+        buildpack = File.join(@buildpacks_dir, buildpack_name)
         if run("#{buildpack}/bin/detect #{@build_dir}") == 0
           @compile_time += realtime { compile(buildpack) }
           release(buildpack)
