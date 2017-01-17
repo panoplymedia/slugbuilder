@@ -30,6 +30,14 @@ sb = Slugbuilder::Builder.new(repo: 'heroku/node-js-sample', git_ref: 'master')
 sb.build # builds the slug `heroku.node-js-sample.master.tgz` in the current directory
 ```
 
+### Override Slug Name
+
+```ruby
+# with environment variables
+sb = Slugbuilder::Builder.new(repo: 'heroku/node-js-sample', git_ref: 'master')
+sb.build(slug_name: 'my_slug') # builds slug to `my_slug.tgz'
+```
+
 ### Setting Build Environment
 
 ```ruby
@@ -82,10 +90,11 @@ end
 
 Alternatively, a Proc can be passed to `build` method's keyword argument `prebuild` to achieve the same effect.
 
-### Builder#build(clear_cache: false, env: {}, prebuild: nil, postbuild: nil, &block)
+### Builder#build(slug_name: nil, clear_cache: false, env: {}, prebuild: nil, postbuild: nil, &block)
 
 `build` builds the slug and writes build information to `STDOUT`.
 
+- `slug_name` String: Override default name of slug
 - `clear_cache` Boolean: destroys the cache before building when true
 - `env` Hash: an optional hash of environment variables
 - `prebuild` Proc: an optional Proc (or anything that conforms to the `call` API of a Proc) that will be run before the build. The Proc will receive a Hash with the structure:
@@ -114,16 +123,19 @@ Configuration settings can be modified within the `Slugbuilder.configure` block.
 Slugbuilder.configure do |config|
   config.base_dir = '/tmp/slugbuilder'
   config.cache_dir = '/tmp/slugbuilder-cache'
+  config.output_dir = './slugs'
 end
 
 Slugbuilder.config.base_dir = '/tmp/slugbuilder'
 Slugbuilder.config.cache_dir = '/tmp/slugbuilder-cache'
+Slugbuilder.config.output_dir = './slugs'
 ```
 
 ### Options
 ```ruby
 @base_dir = '/tmp/slugbuilder'
 @cache_dir = '/tmp/slugbuilder-cache'
+@output_dir = './slugs'
 @buildpacks = [
   'https://github.com/heroku/heroku-buildpack-nodejs.git',
   'https://github.com/heroku/heroku-buildpack-ruby.git#37ed188'
@@ -141,6 +153,12 @@ This is the base directory that builds and apps are stored in.
 This is the directory where the cache lives.
 
 > Defaults to `/tmp/slugbuilder-cache`
+
+**output_dir**
+
+This is where slug files are built to.
+
+> Defaults to `.` (the current directory)
 
 **buildpacks**
 

@@ -9,11 +9,12 @@ module Slugbuilder
       @build_output = []
       @base_dir = Slugbuilder.config.base_dir
       @cache_dir = Shellwords.escape(Slugbuilder.config.cache_dir)
-      @buildpacks_dir = "#{@cache_dir}/buildpacks"
+      @output_dir = Slugbuilder.config.output_dir
+      @buildpacks_dir = File.join(@cache_dir, 'buildpacks')
       @repo = repo
       @git_ref = git_ref
-      @git_dir = Shellwords.escape("#{@base_dir}/git/#{repo}")
-      @build_dir = Shellwords.escape("#{@base_dir}/#{repo}/#{git_ref}")
+      @git_dir = Shellwords.escape(File.join(@base_dir, 'git', repo))
+      @build_dir = Shellwords.escape(File.join(@base_dir, repo, git_ref))
       @slug_file = Shellwords.escape("#{repo.gsub('/', '.')}.#{git_ref}.tgz")
 
       setup
@@ -23,9 +24,10 @@ module Slugbuilder
       end
     end
 
-    def build(clear_cache: false, env: {}, prebuild: nil, postbuild: nil)
+    def build(clear_cache: false, env: {}, prebuild: nil, postbuild: nil, slug_name: nil)
       @build_output = []
       @env = env
+      @slug_file = "#{slug_name}.tgz" if slug_name
       wipe_cache if clear_cache
 
       prebuild.call(repo: @repo, git_ref: @git_ref) if prebuild
@@ -35,6 +37,7 @@ module Slugbuilder
       stitle("Build completed in #{@build_time} seconds")
       stext("Application compiled in #{@compile_time} seconds")
       stext("Slug compressed in #{@slug_time} seconds")
+      stext("Slug built to #{File.join(@output_dir, @slug_file)}")
       stats = {
         setup: @setup_time,
         build: @build_time,
@@ -104,6 +107,7 @@ module Slugbuilder
     def create_dirs
       FileUtils.mkdir_p(@base_dir)
       FileUtils.mkdir_p(File.join(@cache_dir, 'buildpacks'))
+      FileUtils.mkdir_p(@output_dir)
       # clear old build
       FileUtils.rm_rf(@build_dir)
       FileUtils.mkdir_p(File.join(@build_dir, '.profile.d'))
@@ -195,15 +199,15 @@ module Slugbuilder
       # use pigz if available
       compression = run('which pigz') == 0 ? '--use-compress-program=pigz' : ''
       if File.exists?("#{@build_dir}/.slugignore")
-        rc = run_echo("tar --exclude='.git' #{compression} -X #{@build_dir}/.slugignore -C #{@build_dir} -cf #{@slug_file} .")
+        rc = run_echo("tar --exclude='.git' #{compression} -X #{@build_dir}/.slugignore -C #{@build_dir} -cf #{File.join(@output_dir, @slug_file)} .")
       else
-        rc = run_echo("tar --exclude='.git' #{compression} -C #{@build_dir} -cf #{@slug_file} .")
+        rc = run_echo("tar --exclude='.git' #{compression} -C #{@build_dir} -cf #{File.join(@output_dir, @slug_file)} .")
       end
       fail "Couldn't create slugfile" if rc != 0
     end
 
     def slug_size
-      @slug_size = File.size(@slug_file) / 1024 / 1024
+      @slug_size = File.size(File.join(@output_dir, @slug_file)) / 1024 / 1024
       stitle("Slug size is #{@slug_size} Megabytes.")
     end
 
