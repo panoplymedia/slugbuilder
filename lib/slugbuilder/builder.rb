@@ -227,12 +227,12 @@ module Slugbuilder
     end
 
     def stitle(line)
-      @build_output << "-----> #{line}"
+      @build_output << "-----> #{line}\n"
       STDOUT.puts("-----> #{line}")
     end
 
     def stext(line)
-      @build_output << "       #{line}"
+      @build_output << "       #{line}\n"
       STDOUT.puts("       #{line}")
     end
 
