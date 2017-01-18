@@ -93,6 +93,10 @@ module Slugbuilder
       load_env_file("#{@build_dir}/.env")
       ENV['STACK'] = 'cedar-14'
 
+      @env.each do |k, v|
+        ENV[k.to_s] = v.to_s
+      end
+
       ENV['HOME'] = @build_dir
       ENV['APP_DIR'] = @build_dir
 
