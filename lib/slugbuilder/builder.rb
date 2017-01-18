@@ -14,7 +14,6 @@ module Slugbuilder
       @git_ref = git_ref
       @git_dir = Shellwords.escape(File.join(@base_dir, 'git', repo))
       @build_dir = Shellwords.escape(File.join(@base_dir, repo, git_ref))
-      @slug_file = Shellwords.escape("#{repo.gsub('/', '.')}.#{git_ref}.tgz")
 
       setup
 
@@ -25,7 +24,7 @@ module Slugbuilder
 
     def build(clear_cache: false, env: {}, prebuild: nil, postbuild: nil, slug_name: nil)
       @env = env
-      @slug_file = "#{slug_name}.tgz" if slug_name
+      @slug_file = slug_name ? "#{slug_name}.tgz" : Shellwords.escape("#{@repo.gsub('/', '.')}.#{@git_ref}.#{@git_sha}.tgz")
       wipe_cache if clear_cache
 
       prebuild.call(repo: @repo, git_ref: @git_ref) if prebuild
@@ -44,9 +43,9 @@ module Slugbuilder
         output: build_output.join('')
       }
 
-      postbuild.call(repo: @repo, git_ref: @git_ref, stats: stats, slug: File.join(@output_dir, @slug_file)) if postbuild
+      postbuild.call(repo: @repo, git_ref: @git_ref, git_sha: @git_sha, stats: stats, slug: File.join(@output_dir, @slug_file)) if postbuild
       if block_given?
-        yield(repo: @repo, git_ref: @git_ref, stats: stats, slug: File.join(@output_dir, @slug_file))
+        yield(repo: @repo, git_ref: @git_ref, git_sha: @git_sha, stats: stats, slug: File.join(@output_dir, @slug_file))
       end
       return true
     rescue => e
@@ -121,6 +120,7 @@ module Slugbuilder
         # get branch from origin so it is always the most recent
         rc = run("git fetch --all && (git checkout origin/#{@git_ref} || git checkout #{@git_ref})")
         fail "Failed to fetch and checkout: #{@git_ref}" if rc != 0
+        @git_sha = `git rev-parse HEAD`.strip
       end
     end
 

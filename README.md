@@ -94,7 +94,7 @@ Alternatively, a Proc can be passed to `build` method's keyword argument `prebui
 
 `build` builds the slug and writes build information to `STDOUT`.
 
-- `slug_name` String: Override default name of slug
+- `slug_name` String: Override default name of slug (repo.git_ref.git_sha.tgz with the `/` in repo replaced by `.`)
 - `clear_cache` Boolean: destroys the cache before building when true
 - `env` Hash: an optional hash of environment variables
 - `prebuild` Proc: an optional Proc (or anything that conforms to the `call` API of a Proc) that will be run before the build. The Proc will receive a Hash with the structure:
@@ -105,6 +105,7 @@ Alternatively, a block can be passed to the `initialize` method to the same effe
   - `slug` String: Location of the built slug file
   - `repo` String: The git repo identifier
   - `git_ref` String: The git branchname or SHA
+  - `git_sha` String: The git SHA (even if the git ref was a branch name)
   - `stats` Hash:
     - setup `Float`: Amount of time spent in setup
     - build `Float`: Total amount of time spent in build (compile/build/slug)
