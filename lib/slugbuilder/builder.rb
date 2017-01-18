@@ -6,7 +6,6 @@ require 'fileutils'
 module Slugbuilder
   class Builder
     def initialize(repo:, git_ref:)
-      @build_output = []
       @base_dir = Slugbuilder.config.base_dir
       @cache_dir = Shellwords.escape(Slugbuilder.config.cache_dir)
       @output_dir = Slugbuilder.config.output_dir
@@ -25,7 +24,6 @@ module Slugbuilder
     end
 
     def build(clear_cache: false, env: {}, prebuild: nil, postbuild: nil, slug_name: nil)
-      @build_output = []
       @env = env
       @slug_file = "#{slug_name}.tgz" if slug_name
       wipe_cache if clear_cache
@@ -43,7 +41,7 @@ module Slugbuilder
         build: @build_time,
         compile: @compile_time,
         slug: @slug_time,
-        output: @build_output.join('')
+        output: build_output.join('')
       }
 
       postbuild.call(repo: @repo, git_ref: @git_ref, stats: stats, slug: File.join(@output_dir, @slug_file)) if postbuild
@@ -226,13 +224,17 @@ module Slugbuilder
       stitle("Process Types: #{workers.keys.join(', ')}")
     end
 
+    def build_output
+      @build_output ||= []
+    end
+
     def stitle(line)
-      @build_output << "-----> #{line}\n"
+      build_output << "-----> #{line}\n"
       STDOUT.puts("-----> #{line}")
     end
 
     def stext(line)
-      @build_output << "       #{line}\n"
+      build_output << "       #{line}\n"
       STDOUT.puts("       #{line}")
     end
 
@@ -254,7 +256,7 @@ module Slugbuilder
 
     def run_echo(cmd)
       run(cmd) do |line|
-        @build_output << line
+        build_output << line
         STDOUT.print(line)
       end
     end
