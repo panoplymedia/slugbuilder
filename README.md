@@ -84,7 +84,8 @@ end
 
 - `repo` String (required): the github repo in the form `<organization>/<repository>`
 - `git_ref` String (required): the SHA or branch to build
-- `block` Block: an optional block that runs pre-build. It receives a Hash with the structure:
+- `stdout` IO (optional): the IO stream to write build output to. This defaults to `$stdout`
+- `block` Block (optional): an optional block that runs pre-build. It receives a Hash with the structure:
   - `repo` String: The git repo identifier
   - `git_ref` String: The git branchname or SHA
 
@@ -94,14 +95,14 @@ Alternatively, a Proc can be passed to `build` method's keyword argument `prebui
 
 `build` builds the slug and writes build information to `STDOUT`.
 
-- `slug_name` String: Override default name of slug (repo.git_ref.git_sha.tgz with the `/` in repo replaced by `.`)
-- `clear_cache` Boolean: destroys the cache before building when true
-- `env` Hash: an optional hash of environment variables
-- `prebuild` Proc: an optional Proc (or anything that conforms to the `call` API of a Proc) that will be run before the build. The Proc will receive a Hash with the structure:
+- `slug_name` String (optional): Override default name of slug (repo.git_ref.git_sha.tgz with the `/` in repo replaced by `.`)
+- `clear_cache` Boolean (optional): destroys the cache before building when true
+- `env` Hash (optional): an optional hash of environment variables
+- `prebuild` Proc (optional): an optional Proc (or anything that conforms to the `call` API of a Proc) that will be run before the build. The Proc will receive a Hash with the structure:
   - `repo` String: The git repo identifier
   - `git_ref` String: The git branchname or SHA
 Alternatively, a block can be passed to the `initialize` method to the same effect.
-- `postbuild` Proc: an optional Proc (or anything that conforms to the `call` API of a Proc) that will run post-build. The Proc will receive a Hash with the structure:
+- `postbuild` Proc (optional): an optional Proc (or anything that conforms to the `call` API of a Proc) that will run post-build. The Proc will receive a Hash with the structure:
   - `slug` String: Location of the built slug file
   - `repo` String: The git repo identifier
   - `git_ref` String: The git branchname or SHA
@@ -114,7 +115,7 @@ Alternatively, a block can be passed to the `initialize` method to the same effe
     - output `String`: Build output to STDOUT
 
 Alternatively, a block can be passed to this method to the same effect. (see below)
-- `block` Block: an optional block that can be used as an alternative to the `postbuild` Proc argument. This receives the same arguments as `postbuild` (see above)
+- `block` Block (optional): an optional block that can be used as an alternative to the `postbuild` Proc argument. This receives the same arguments as `postbuild` (see above)
 
 ## Configuration
 

@@ -5,7 +5,8 @@ require 'fileutils'
 
 module Slugbuilder
   class Builder
-    def initialize(repo:, git_ref:)
+    def initialize(repo:, git_ref:, stdout: $stdout)
+      @stdout = stdout
       @base_dir = Slugbuilder.config.base_dir
       @cache_dir = Shellwords.escape(Slugbuilder.config.cache_dir)
       @output_dir = Slugbuilder.config.output_dir
@@ -34,7 +35,7 @@ module Slugbuilder
       stitle("Build completed in #{@build_time} seconds")
       stext("Application compiled in #{@compile_time} seconds")
       stext("Slug compressed in #{@slug_time} seconds")
-      stext("Slug built to #{File.join(@output_dir, @slug_file)}")
+      stitle("Slug built to #{File.join(@output_dir, @slug_file)}")
       stats = {
         setup: @setup_time,
         build: @build_time,
@@ -77,7 +78,7 @@ module Slugbuilder
         download_repo unless Dir.exist?(@git_dir)
         checkout_git_ref
 
-        stext("Saving application to #{@build_dir}")
+        stitle("Saving application to #{@build_dir}")
         copy_app
       end
     end
@@ -118,7 +119,7 @@ module Slugbuilder
       Dir.chdir(@git_dir) do
         # checkout branch or sha
         # get branch from origin so it is always the most recent
-        rc = run("git fetch --all && (git checkout origin/#{@git_ref} || git checkout #{@git_ref})")
+        rc = run("git fetch --all && (git checkout origin/#{@git_ref} || git checkout #{@git_ref}) 2>&1")
         fail "Failed to fetch and checkout: #{@git_ref}" if rc != 0
         @git_sha = `git rev-parse HEAD`.strip
       end
@@ -126,7 +127,7 @@ module Slugbuilder
 
     def download_repo
       stitle("Fetching #{@repo}")
-      rc = run_echo("git clone git@#{Slugbuilder.config.git_service}:#{@repo}.git #{@git_dir}")
+      rc = run("git clone git@#{Slugbuilder.config.git_service}:#{@repo}.git #{@git_dir} 2>&1")
       fail "Failed to download repo: #{@repo}" if rc != 0
     end
 
@@ -151,13 +152,13 @@ module Slugbuilder
         if !existing_buildpacks.include?(buildpack_name)
           # download buildpack
           stitle("Fetching buildpack: #{buildpack_name}")
-          rc = run("git clone --depth=1 #{buildpack_url} #{@buildpacks_dir}/#{buildpack_name}")
+          rc = run("git clone --depth=1 #{buildpack_url} #{@buildpacks_dir}/#{buildpack_name} 2>&1")
           fail "Failed to download buildpack: #{buildpack_name}" if rc != 0
         else
           # fetch latest
           stitle("Using cached buildpack. Ensuring latest version of buildpack: #{buildpack_name}")
           Dir.chdir("#{@buildpacks_dir}/#{buildpack_name}") do
-            rc = run('git pull')
+            rc = run('git pull 2>&1')
             fail "Failed to update: #{buildpack_name}" if rc != 0
           end
         end
@@ -199,7 +200,7 @@ module Slugbuilder
     def build_slug
       rc = 1
       # use pigz if available
-      compression = run('which pigz') == 0 ? '--use-compress-program=pigz' : ''
+      compression = `which pigz` != '' ? '--use-compress-program=pigz' : ''
       if File.exists?("#{@build_dir}/.slugignore")
         rc = run_echo("tar --exclude='.git' #{compression} -X #{@build_dir}/.slugignore -C #{@build_dir} -cf #{File.join(@output_dir, @slug_file)} .")
       else
@@ -234,12 +235,12 @@ module Slugbuilder
 
     def stitle(line)
       build_output << "-----> #{line}\n"
-      STDOUT.puts("-----> #{line}")
+      @stdout.puts("-----> #{line}")
     end
 
     def stext(line)
       build_output << "       #{line}\n"
-      STDOUT.puts("       #{line}")
+      @stdout.puts("       #{line}")
     end
 
     def realtime
@@ -261,7 +262,7 @@ module Slugbuilder
     def run_echo(cmd)
       run(cmd) do |line|
         build_output << line
-        STDOUT.print(line)
+        @stdout.print(line)
       end
     end
 
