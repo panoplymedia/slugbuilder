@@ -74,6 +74,21 @@ describe Slugbuilder::Builder do
       expect(Dir['/tmp/slugbuilder-cache/buildpacks/*']).to eq(['/tmp/slugbuilder-cache/buildpacks/heroku-buildpack-nodejs'])
     end
 
+    it 'allows specifying the buildpacks for a build' do
+      builder.build
+      expect(Dir['/tmp/slugbuilder-cache/buildpacks/*']).to eq(['/tmp/slugbuilder-cache/buildpacks/heroku-buildpack-nodejs'])
+      buildpacks = [
+        'https://github.com/heroku/heroku-buildpack-nodejs.git',
+        'https://github.com/heroku/heroku-buildpack-ruby.git'
+      ]
+      builder.build(buildpacks: buildpacks)
+      expect(Dir['/tmp/slugbuilder-cache/buildpacks/*']).to eq([
+        '/tmp/slugbuilder-cache/buildpacks/heroku-buildpack-nodejs',
+        '/tmp/slugbuilder-cache/buildpacks/heroku-buildpack-ruby'
+      ])
+
+    end
+
     it 'accepts a prebuild Proc' do
       # conforms to `call` API of a proc
       # but a proc will work here too

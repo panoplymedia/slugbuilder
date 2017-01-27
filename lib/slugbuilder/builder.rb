@@ -23,7 +23,8 @@ module Slugbuilder
       end
     end
 
-    def build(clear_cache: false, env: {}, prebuild: nil, postbuild: nil, slug_name: nil)
+    def build(clear_cache: false, env: {}, prebuild: nil, postbuild: nil, slug_name: nil, buildpacks: Slugbuilder.config.buildpacks)
+      @buildpacks = buildpacks
       @env = env
       @slug_file = slug_name ? "#{slug_name}.tgz" : Shellwords.escape("#{@repo.gsub('/', '.')}.#{@git_ref}.#{@git_sha}.tgz")
       wipe_cache if clear_cache
@@ -143,12 +144,11 @@ module Slugbuilder
     end
 
     def fetch_buildpacks
-      buildpacks = Slugbuilder.config.buildpacks
-      buildpacks << Shellwords.escape(@env['BUILDPACK_URL']) if @env.key?('BUILDPACK_URL')
-      fail 'Could not detect buildpack' if buildpacks.size.zero?
+      @buildpacks << Shellwords.escape(@env['BUILDPACK_URL']) if @env.key?('BUILDPACK_URL')
+      fail 'Could not detect buildpack' if @buildpacks.size.zero?
 
       existing_buildpacks = Dir.entries(@buildpacks_dir)
-      buildpacks.each do |buildpack_url|
+      @buildpacks.each do |buildpack_url|
         buildpack_name = get_buildpack_name(buildpack_url)
         if !existing_buildpacks.include?(buildpack_name)
           # download buildpack
@@ -165,7 +165,7 @@ module Slugbuilder
         end
       end
 
-      buildpacks
+      @buildpacks
     end
 
     def run_buildpacks(buildpacks)

@@ -91,13 +91,14 @@ end
 
 Alternatively, a Proc can be passed to `build` method's keyword argument `prebuild` to achieve the same effect.
 
-### Builder#build(slug_name: nil, clear_cache: false, env: {}, prebuild: nil, postbuild: nil, &block)
+### Builder#build(slug_name: nil, clear_cache: false, env: {}, buildpacks: Slugbuilder.config.buildpacks, prebuild: nil, postbuild: nil, &block)
 
 `build` builds the slug and writes build information to `STDOUT`.
 
 - `slug_name` String (optional): Override default name of slug (repo.git_ref.git_sha.tgz with the `/` in repo replaced by `.`)
 - `clear_cache` Boolean (optional): destroys the cache before building when true
 - `env` Hash (optional): an optional hash of environment variables
+- `buildpacks` Array (optional): optionally set buildpacks to be used for that particular build. defaults to `Slugbuilder.config.buildpacks`
 - `prebuild` Proc (optional): an optional Proc (or anything that conforms to the `call` API of a Proc) that will be run before the build. The Proc will receive a Hash with the structure:
   - `repo` String: The git repo identifier
   - `git_ref` String: The git branchname or SHA
