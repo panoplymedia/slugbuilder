@@ -2,7 +2,7 @@
 
 Slugbuilder is a Ruby gem to build [Heroku](https://www.heroku.com/)-like [slugs](https://devcenter.heroku.com/articles/platform-api-deploying-slugs).
 
-It runs Heroku [buildpacks](https://devcenter.heroku.com/articles/buildpacks) on an application and builds a [slug](https://devcenter.heroku.com/articles/slug-compiler), which is essentially a `tar` file that can run on services like Heroku, [lxfontes/slugrunner-rb](https://github.com/lxfontes/slugrunner-rb), [deis/slugrunner](https://github.com/deis/slugrunner), and the like.
+It runs Heroku [buildpacks](https://devcenter.heroku.com/articles/buildpacks) on an application and builds a [slug](https://devcenter.heroku.com/articles/slug-compiler), which is essentially a `tar` file that can run on services like Heroku, [panoplymedia/slugrunner](https://github.com/panoplymedia/slugrunner), [lxfontes/slugrunner-rb](https://github.com/lxfontes/slugrunner-rb), [deis/slugrunner](https://github.com/deis/slugrunner), and the like.
 
 ## Installation
 
