@@ -50,7 +50,7 @@ module Slugbuilder
       end
       return true
     rescue => e
-      stitle("Failed to create slug: #{e}")
+      stitle("Failed: #{e}")
       return false
     end
 
