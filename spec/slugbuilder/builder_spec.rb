@@ -63,8 +63,15 @@ describe Slugbuilder::Builder do
     end
 
     it 'allows building without the cache' do
+      Slugbuilder.config.buildpacks = [
+        'https://github.com/heroku/heroku-buildpack-nodejs.git',
+        'https://github.com/heroku/heroku-buildpack-ruby.git'
+      ]
+      builder.build
+      Slugbuilder.config.buildpacks = ['https://github.com/heroku/heroku-buildpack-nodejs.git']
       builder.build(clear_cache: true)
-      expect(Dir.exists?('/tmp/slugbuilder-cache')).to be(false)
+      # make sure that ruby buildpack is no longer cached
+      expect(Dir['/tmp/slugbuilder-cache/buildpacks/*']).to eq(['/tmp/slugbuilder-cache/buildpacks/heroku-buildpack-nodejs'])
     end
 
     it 'accepts a prebuild Proc' do

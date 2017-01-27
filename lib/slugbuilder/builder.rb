@@ -59,6 +59,7 @@ module Slugbuilder
 
     def wipe_cache
       FileUtils.rm_rf(@cache_dir)
+      FileUtils.mkdir_p(File.join(@cache_dir, 'buildpacks'))
     end
 
     def build_and_release
