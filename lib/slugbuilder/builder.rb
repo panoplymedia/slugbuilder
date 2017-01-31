@@ -179,6 +179,10 @@ module Slugbuilder
         buildpack = File.join(@buildpacks_dir, buildpack_name)
         if run("#{buildpack}/bin/detect #{@build_dir}") == 0
           @compile_time += realtime { compile(buildpack) }
+
+          # load environment for subsequent buildpacks
+          load_export_env(File.join(buildpack, 'export'))
+
           release(buildpack)
         end
       end
@@ -267,6 +271,21 @@ module Slugbuilder
       run(cmd) do |line|
         build_output << line
         @stdout.print(line)
+      end
+    end
+
+    def load_export_env(file)
+      if File.exists?(file)
+        exports = IO.read(file).split('export')
+        exports.each do |line|
+          parts = line.split(/=/, 2)
+          next if parts.length != 2
+          name, val = parts
+          name.strip!
+          val = val.strip.split(/\n/).join.gsub('"', '')
+
+          ENV[name] = `echo "#{val}"`.strip
+        end
       end
     end
 
