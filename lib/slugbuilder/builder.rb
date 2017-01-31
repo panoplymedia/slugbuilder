@@ -193,7 +193,7 @@ module Slugbuilder
     def release(buildpack)
       # should create .release
       release_file = File.open("#{@build_dir}/.release", 'w')
-      rc = run("#{buildpack}/bin/release '#{@build_dir}' '#{@cache_dir}'") do |line|
+      rc = run("#{buildpack}/bin/release '#{@build_dir}'") do |line|
         release_file.print(line)
       end
       release_file.close
