@@ -51,7 +51,7 @@ module Slugbuilder
       end
       return true
     rescue => e
-      stitle("Failed: #{e}")
+      stitle("Failed: #{e}\n#{e.backtrace.join("\n")}")
       return false
     end
 
