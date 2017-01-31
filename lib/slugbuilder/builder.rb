@@ -11,6 +11,7 @@ module Slugbuilder
       @cache_dir = Shellwords.escape(Slugbuilder.config.cache_dir)
       @output_dir = Slugbuilder.config.output_dir
       @buildpacks_dir = File.join(@cache_dir, 'buildpacks')
+      @env_dir = File.join(@base_dir, 'environment')
       @repo = repo
       @git_ref = git_ref
       @git_dir = Shellwords.escape(File.join(@base_dir, 'git', repo))
@@ -24,6 +25,10 @@ module Slugbuilder
     end
 
     def build(clear_cache: false, env: {}, prebuild: nil, postbuild: nil, slug_name: nil, buildpacks: Slugbuilder.config.buildpacks)
+      # clear environment from previous builds
+      FileUtils.rm_rf(@env_dir)
+      FileUtils.mkdir_p(@env_dir)
+
       @buildpacks = buildpacks
       @env = env
       @slug_file = slug_name ? "#{slug_name}.tgz" : Shellwords.escape("#{@repo.gsub('/', '.')}.#{@git_ref}.#{@git_sha}.tgz")
@@ -60,7 +65,7 @@ module Slugbuilder
 
     def wipe_cache
       FileUtils.rm_rf(@cache_dir)
-      FileUtils.mkdir_p(File.join(@cache_dir, 'buildpacks'))
+      FileUtils.mkdir_p(@buildpacks_dir)
     end
 
     def build_and_release
@@ -98,9 +103,8 @@ module Slugbuilder
       ENV['REQUEST_ID'] = @request_id
       ENV['SOURCE_VERSION'] = @git_sha
 
-      @env.each do |k, v|
-        ENV[k.to_s] = v.to_s
-      end
+      # write user envs to files
+      write_user_envs(@env)
 
       ENV['HOME'] = @build_dir
       ENV['APP_DIR'] = @build_dir
@@ -113,7 +117,7 @@ module Slugbuilder
 
     def create_dirs
       FileUtils.mkdir_p(@base_dir)
-      FileUtils.mkdir_p(File.join(@cache_dir, 'buildpacks'))
+      FileUtils.mkdir_p(@buildpacks_dir)
       FileUtils.mkdir_p(@output_dir)
       # clear old build
       FileUtils.rm_rf(@build_dir)
@@ -190,7 +194,7 @@ module Slugbuilder
     end
 
     def compile(buildpack)
-      rc = run_echo("#{buildpack}/bin/compile '#{@build_dir}' '#{@cache_dir}'")
+      rc = run_echo("#{buildpack}/bin/compile '#{@build_dir}' '#{@cache_dir}' '#{@env_dir}'")
       fail "Couldn't compile application using buildpack #{buildpack}" if rc != 0
     end
 
@@ -289,6 +293,14 @@ module Slugbuilder
       end
     end
 
+    def write_user_envs(envs)
+      envs.each do |key, val|
+        File.open(File.join(@env_dir, key.to_s), 'w') do |file|
+          file.write(val.to_s)
+        end
+      end
+    end
+
     def load_env_file(file)
       if File.exists?(file)
         new_envs = IO.readlines(file)
@@ -299,7 +311,6 @@ module Slugbuilder
           parts = line.split(/=/, 2)
           next if parts.length != 2
 
-          ENV[parts[0]] = parts[1]
           @env[parts[0]] = parts[1]
         end
       end

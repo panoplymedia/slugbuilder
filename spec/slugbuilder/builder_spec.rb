@@ -58,8 +58,14 @@ describe Slugbuilder::Builder do
 
     it 'allows setting the env' do
       builder.build(env: {TEST_ENV: 'something', ANOTHER_ONE: 3})
-      expect(ENV['TEST_ENV']).to eq('something')
-      expect(ENV['ANOTHER_ONE']).to eq('3')
+      expect(Dir['/tmp/slugbuilder/environment/*']).to eq(['/tmp/slugbuilder/environment/ANOTHER_ONE', '/tmp/slugbuilder/environment/TEST_ENV'])
+      expect(IO.read('/tmp/slugbuilder/environment/TEST_ENV')).to eq('something')
+      expect(IO.read('/tmp/slugbuilder/environment/ANOTHER_ONE')).to eq('3')
+    end
+
+    it 'creates environment dir on build' do
+      builder.build
+      expect(Dir['/tmp/slugbuilder/*']).to include('/tmp/slugbuilder/environment')
     end
 
     it 'allows building without the cache' do
