@@ -102,14 +102,14 @@ describe Slugbuilder::Builder do
 
     it 'accepts a postbuild Proc' do
       my_proc = ->(args) do
-        expect(args.keys).to include(:repo, :git_ref, :git_sha, :stats, :slug)
+        expect(args.keys).to include(:repo, :git_ref, :git_sha, :request_id, :stats, :slug)
       end
       builder.build(postbuild: my_proc)
     end
 
     it 'accepts a postbuild block' do
       builder.build do |args|
-        expect(args.keys).to include(:repo, :git_ref, :git_sha, :stats, :slug)
+        expect(args.keys).to include(:repo, :git_ref, :git_sha, :request_id, :stats, :slug)
       end
     end
   end

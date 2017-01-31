@@ -108,6 +108,7 @@ Alternatively, a block can be passed to the `initialize` method to the same effe
   - `repo` String: The git repo identifier
   - `git_ref` String: The git branchname or SHA
   - `git_sha` String: The git SHA (even if the git ref was a branch name)
+  - `request_id` String: The unique id of the build request
   - `stats` Hash:
     - setup `Float`: Amount of time spent in setup
     - build `Float`: Total amount of time spent in build (compile/build/slug)

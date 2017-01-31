@@ -45,9 +45,9 @@ module Slugbuilder
         output: build_output.join('')
       }
 
-      postbuild.call(repo: @repo, git_ref: @git_ref, git_sha: @git_sha, stats: stats, slug: File.join(@output_dir, @slug_file)) if postbuild
+      postbuild.call(repo: @repo, git_ref: @git_ref, git_sha: @git_sha, request_id: @request_id, stats: stats, slug: File.join(@output_dir, @slug_file)) if postbuild
       if block_given?
-        yield(repo: @repo, git_ref: @git_ref, git_sha: @git_sha, stats: stats, slug: File.join(@output_dir, @slug_file))
+        yield(repo: @repo, git_ref: @git_ref, git_sha: @git_sha, request_id: @request_id, stats: stats, slug: File.join(@output_dir, @slug_file))
       end
       return true
     rescue => e
@@ -94,6 +94,8 @@ module Slugbuilder
       load_env_file("#{@cache_dir}/env")
       load_env_file("#{@build_dir}/.env")
       ENV['STACK'] = 'cedar-14'
+      @request_id = SecureRandom.urlsafe_base64(32)
+      ENV['REQUEST_ID'] = @request_id
 
       @env.each do |k, v|
         ENV[k.to_s] = v.to_s
