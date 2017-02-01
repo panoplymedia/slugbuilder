@@ -25,6 +25,7 @@ module Slugbuilder
     end
 
     def build(clear_cache: false, env: {}, prebuild: nil, postbuild: nil, slug_name: nil, buildpacks: Slugbuilder.config.buildpacks)
+      @old_env = ENV.to_h
       # clear environment from previous builds
       FileUtils.rm_rf(@env_dir)
       FileUtils.mkdir_p(@env_dir)
@@ -36,7 +37,9 @@ module Slugbuilder
 
       prebuild.call(repo: @repo, git_ref: @git_ref) if prebuild
 
-      build_and_release
+      with_clean_env do
+        build_and_release
+      end
       stitle("Setup completed in #{@setup_time} seconds")
       stitle("Build completed in #{@build_time} seconds")
       stext("Application compiled in #{@compile_time} seconds")
@@ -58,10 +61,23 @@ module Slugbuilder
     rescue => e
       stitle("Failed: #{e}\n#{e.backtrace.join("\n")}")
       return false
+    ensure
+      restore_env
     end
 
 
     private
+
+    def restore_env
+      ENV.delete_if { true }
+      ENV.update(@old_env)
+    end
+
+    def with_clean_env
+      ENV.delete_if { true }
+      yield
+      restore_env
+    end
 
     def wipe_cache
       FileUtils.rm_rf(@cache_dir)
