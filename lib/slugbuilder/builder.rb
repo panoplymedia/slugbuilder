@@ -96,6 +96,7 @@ module Slugbuilder
       ENV['STACK'] = 'cedar-14'
       @request_id = SecureRandom.urlsafe_base64(32)
       ENV['REQUEST_ID'] = @request_id
+      ENV['SOURCE_VERSION'] = @git_sha
 
       @env.each do |k, v|
         ENV[k.to_s] = v.to_s
