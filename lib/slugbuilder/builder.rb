@@ -128,7 +128,7 @@ module Slugbuilder
       Dir.chdir(@git_dir) do
         # checkout branch or sha
         # get branch from origin so it is always the most recent
-        rc = run("git fetch --all && (git checkout origin/#{@git_ref} || git checkout #{@git_ref}) 2>&1")
+        rc = run("git fetch --quiet --all && (git checkout --quiet origin/#{@git_ref} || git checkout --quiet #{@git_ref})")
         fail "Failed to fetch and checkout: #{@git_ref}" if rc != 0
         @git_sha = `git rev-parse HEAD`.strip
       end
@@ -136,7 +136,7 @@ module Slugbuilder
 
     def download_repo
       stitle("Fetching #{@repo}")
-      rc = run("git clone git@#{Slugbuilder.config.git_service}:#{@repo}.git #{@git_dir} 2>&1")
+      rc = run("git clone --quiet git@#{Slugbuilder.config.git_service}:#{@repo}.git #{@git_dir}")
       fail "Failed to download repo: #{@repo}" if rc != 0
     end
 
@@ -160,13 +160,13 @@ module Slugbuilder
         if !existing_buildpacks.include?(buildpack_name)
           # download buildpack
           stitle("Fetching buildpack: #{buildpack_name}")
-          rc = run("git clone --depth=1 #{buildpack_url} #{@buildpacks_dir}/#{buildpack_name} 2>&1")
+          rc = run("git clone --quiet --depth=1 #{buildpack_url} #{@buildpacks_dir}/#{buildpack_name}")
           fail "Failed to download buildpack: #{buildpack_name}" if rc != 0
         else
           # fetch latest
           stitle("Using cached buildpack. Ensuring latest version of buildpack: #{buildpack_name}")
           Dir.chdir("#{@buildpacks_dir}/#{buildpack_name}") do
-            rc = run('git pull 2>&1')
+            rc = run('git pull --quiet')
             fail "Failed to update: #{buildpack_name}" if rc != 0
           end
         end
