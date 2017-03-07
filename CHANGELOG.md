@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0 (2017-3-7)
+
+Added:
+
+- Run `bin/pre-compile` before any buildpacks are run (if it exists) and run `bin/post-compile` after all buildpacks are run (if it exists). These files are contained in the project being built. [e2b5295](../../commit/e2b5295)
+
 ## 1.2.0 (2017-2-1)
 
 Fixed:
