@@ -48,7 +48,7 @@ describe Slugbuilder::Builder do
 
     it 'builds the slug' do
       builder.build
-      expect(Dir['/tmp/slugs/*']).to include('/tmp/slugs/jdlehman.node-js-sample.master.01262b640c76f95c4aa95a0fb8cd44741d8cc5bc.tgz')
+      expect(Dir['/tmp/slugs/*']).to include('/tmp/slugs/jdlehman.node-js-sample.master.8edb1341f89cdb692940c8aec9edb53edeaa1bad.tgz')
     end
 
     it 'allows setting the slug_name' do
@@ -117,6 +117,14 @@ describe Slugbuilder::Builder do
       builder.build do |args|
         expect(args.keys).to include(:repo, :git_ref, :git_sha, :request_id, :stats, :slug)
       end
+    end
+
+    it 'runs pre-compile and post-compile script if present' do
+      builder.build
+      expect(Dir['/tmp/slugbuilder/jdlehman/node-js-sample/master/*']).to include(
+        '/tmp/slugbuilder/jdlehman/node-js-sample/master/pre-compile-success',
+        '/tmp/slugbuilder/jdlehman/node-js-sample/master/post-compile-success'
+      )
     end
   end
 end

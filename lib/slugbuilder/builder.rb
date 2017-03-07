@@ -88,7 +88,9 @@ module Slugbuilder
       @build_time = realtime do
         set_environment
         buildpacks = fetch_buildpacks
+        run_hook('pre-compile')
         run_buildpacks(buildpacks)
+        run_hook('post-compile')
         @slug_time = realtime { build_slug }
         slug_size
         print_workers
@@ -189,6 +191,13 @@ module Slugbuilder
       end
 
       @buildpacks
+    end
+
+    def run_hook(hook_name)
+      Dir.chdir(@build_dir) do
+        script = "#{@build_dir}/bin/#{hook_name}"
+        run(script) if File.exists?(script)
+      end
     end
 
     def run_buildpacks(buildpacks)

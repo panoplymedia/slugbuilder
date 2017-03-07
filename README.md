@@ -78,6 +78,8 @@ sb.build(env: {}) do |args|
 end
 ```
 
+You can optionally define a `pre-compile` or `post-compile` script in your application's `bin` folder (eg. `bin/pre-compile`). The `pre-compile` script will run before any buildpacks are run, and the `post-compile` script will run after all of the buildpacks are run. The script should be executable (run `chmod +x` on the script files).
+
 ## API
 
 ### Builder#initialize(repo:, git_ref:, &block)
