@@ -12,15 +12,17 @@ module Slugbuilder
       @output_dir = Slugbuilder.config.output_dir
       @buildpacks_dir = File.join(@cache_dir, 'buildpacks')
       @env_dir = File.join(@base_dir, 'environment')
-      @repo = repo
+      repo_matches = parse_git_url(repo)
+      @repo = "#{repo_matches[:org]}/#{repo_matches[:name]}"
+      @git_url = normalize_git_url(repo)
       @git_ref = git_ref
-      @git_dir = Shellwords.escape(File.join(@base_dir, 'git', repo))
-      @build_dir = Shellwords.escape(File.join(@base_dir, repo, git_ref))
+      @git_dir = Shellwords.escape(File.join(@base_dir, 'git', @repo))
+      @build_dir = Shellwords.escape(File.join(@base_dir, @repo, git_ref))
 
       setup
 
       if block_given?
-        yield(repo: repo, git_ref: git_ref)
+        yield(repo: @repo, git_ref: git_ref, git_url: @git_url)
       end
     end
 
@@ -35,7 +37,7 @@ module Slugbuilder
       @slug_file = slug_name ? "#{slug_name}.tgz" : Shellwords.escape("#{@repo.gsub('/', '.')}.#{@git_ref}.#{@git_sha}.tgz")
       wipe_cache if clear_cache
 
-      prebuild.call(repo: @repo, git_ref: @git_ref) if prebuild
+      prebuild.call(repo: @repo, git_ref: @git_ref, git_url: @git_url) if prebuild
 
       with_clean_env do
         build_and_release
@@ -53,9 +55,9 @@ module Slugbuilder
         output: build_output.join('')
       }
 
-      postbuild.call(repo: @repo, git_ref: @git_ref, git_sha: @git_sha, request_id: @request_id, stats: stats, slug: File.join(@output_dir, @slug_file)) if postbuild
+      postbuild.call(repo: @repo, git_ref: @git_ref, git_sha: @git_sha, git_url: @git_url, request_id: @request_id, stats: stats, slug: File.join(@output_dir, @slug_file)) if postbuild
       if block_given?
-        yield(repo: @repo, git_ref: @git_ref, git_sha: @git_sha, request_id: @request_id, stats: stats, slug: File.join(@output_dir, @slug_file))
+        yield(repo: @repo, git_ref: @git_ref, git_sha: @git_sha, git_url: @git_url, request_id: @request_id, stats: stats, slug: File.join(@output_dir, @slug_file))
       end
       return true
     rescue => e
@@ -154,7 +156,7 @@ module Slugbuilder
 
     def download_repo
       stitle("Fetching #{@repo}")
-      rc = run("git clone --quiet git@#{Slugbuilder.config.git_service}:#{@repo}.git #{@git_dir}")
+      rc = run("git clone --quiet #{@git_url} #{@git_dir}")
       fail "Failed to download repo: #{@repo}" if rc != 0
     end
 
@@ -165,7 +167,8 @@ module Slugbuilder
     end
 
     def get_buildpack_name(url)
-      url.match(/.+\/(.+?)\.git$/)[1]
+      matches = parse_git_url(url)
+      "#{matches[:org]}__#{matches[:name]}#{matches[:hash]}"
     end
 
     def fetch_buildpacks
@@ -174,11 +177,12 @@ module Slugbuilder
 
       existing_buildpacks = Dir.entries(@buildpacks_dir)
       @buildpacks.each do |buildpack_url|
+        buildpack_matches = parse_git_url(buildpack_url)
         buildpack_name = get_buildpack_name(buildpack_url)
         if !existing_buildpacks.include?(buildpack_name)
           # download buildpack
           stitle("Fetching buildpack: #{buildpack_name}")
-          rc = run("git clone --quiet --depth=1 #{buildpack_url} #{@buildpacks_dir}/#{buildpack_name}")
+          rc = run("git clone --quiet #{normalize_git_url(buildpack_url)} #{@buildpacks_dir}/#{buildpack_name}")
           fail "Failed to download buildpack: #{buildpack_name}" if rc != 0
         else
           # fetch latest
@@ -186,6 +190,14 @@ module Slugbuilder
           Dir.chdir("#{@buildpacks_dir}/#{buildpack_name}") do
             rc = run('git pull --quiet')
             fail "Failed to update: #{buildpack_name}" if rc != 0
+          end
+        end
+
+        # checkout hash
+        if buildpack_matches[:hash]
+          Dir.chdir("#{@buildpacks_dir}/#{buildpack_name}") do
+            rc = run("git fetch --quiet --all && git checkout --quiet #{buildpack_matches[:hash]}")
+            fail "Failed to fetch and checkout: #{buildpack_matches[:hash]}" if rc != 0
           end
         end
       end
@@ -249,6 +261,29 @@ module Slugbuilder
     def slug_size
       @slug_size = File.size(File.join(@output_dir, @slug_file)) / 1024 / 1024
       stitle("Slug size is #{@slug_size} Megabytes.")
+    end
+
+    def parse_git_url(url)
+      regex = %r{
+        ^
+        .*?
+        (?:(?<host>[^\/@]+)(\/|:))?
+        (?<org>[^\/:]+)
+        \/
+        (?<name>[^\/#\.]+)
+        (?:\.git(?:\#(?<hash>.+))?)?
+        $
+      }x
+      url.match(regex)
+    end
+
+    def normalize_git_url(url)
+      matches = parse_git_url(url)
+      if Slugbuilder.config.protocol == 'ssh'
+        "git@#{matches[:host] || Slugbuilder.config.git_service}:#{matches[:org]}/#{matches[:name]}.git"
+      else
+        "https://#{matches[:host] || Slugbuilder.config.git_service}/#{matches[:org]}/#{matches[:name]}.git"
+      end
     end
 
     def print_workers

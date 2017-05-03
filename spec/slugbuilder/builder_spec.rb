@@ -8,6 +8,7 @@ describe Slugbuilder::Builder do
       config.base_dir = '/tmp/slugbuilder'
       config.cache_dir = '/tmp/slugbuilder-cache'
       config.output_dir = '/tmp/slugs'
+      config.protocol = 'https'
       config.buildpacks = ['https://github.com/heroku/heroku-buildpack-nodejs.git']
     end
   end
@@ -38,7 +39,29 @@ describe Slugbuilder::Builder do
 
     it 'accepts a prebuild block' do
       Slugbuilder::Builder.new(repo: repo, git_ref: 'master', stdout: StringIO.new) do |args|
-        expect(args).to eq({repo: repo, git_ref: 'master'})
+        expect(args).to eq({repo: repo, git_ref: 'master', git_url: 'https://github.com/jdlehman/node-js-sample.git'})
+      end
+    end
+
+    it 'allows repo in different formats' do
+      Slugbuilder::Builder.new(repo: 'https://github.com/jdlehman/node-js-sample.git', git_ref: 'master', stdout: StringIO.new) do |args|
+        expect(args).to eq({repo: repo, git_ref: 'master', git_url: 'https://github.com/jdlehman/node-js-sample.git'})
+      end
+    end
+
+    it 'allows overriding default git service' do
+      Slugbuilder::Builder.new(repo: 'https://gitlab.com/jdlehman/node-js-sample.git', git_ref: 'master', stdout: StringIO.new) do |args|
+        expect(args).to eq({repo: repo, git_ref: 'master', git_url: 'https://gitlab.com/jdlehman/node-js-sample.git'})
+      end
+    end
+
+    it 'converts git urls to the specified protocol' do
+      Slugbuilder::Builder.new(repo: 'git@gitlab.com:jdlehman/node-js-sample.git', git_ref: 'master', stdout: StringIO.new) do |args|
+        expect(args).to eq({repo: repo, git_ref: 'master', git_url: 'https://gitlab.com/jdlehman/node-js-sample.git'})
+      end
+      Slugbuilder.config.protocol = 'ssh'
+      Slugbuilder::Builder.new(repo: 'https://gitlab.com/jdlehman/node-js-sample.git', git_ref: 'master', stdout: StringIO.new) do |args|
+        expect(args).to eq({repo: repo, git_ref: 'master', git_url: 'git@gitlab.com:jdlehman/node-js-sample.git'})
       end
     end
   end
@@ -77,22 +100,34 @@ describe Slugbuilder::Builder do
       Slugbuilder.config.buildpacks = ['https://github.com/heroku/heroku-buildpack-nodejs.git']
       builder.build(clear_cache: true)
       # make sure that ruby buildpack is no longer cached
-      expect(Dir['/tmp/slugbuilder-cache/buildpacks/*']).to eq(['/tmp/slugbuilder-cache/buildpacks/heroku-buildpack-nodejs'])
+      expect(Dir['/tmp/slugbuilder-cache/buildpacks/*']).to eq(['/tmp/slugbuilder-cache/buildpacks/heroku__heroku-buildpack-nodejs'])
     end
 
     it 'allows specifying the buildpacks for a build' do
       builder.build
-      expect(Dir['/tmp/slugbuilder-cache/buildpacks/*']).to eq(['/tmp/slugbuilder-cache/buildpacks/heroku-buildpack-nodejs'])
+      expect(Dir['/tmp/slugbuilder-cache/buildpacks/*']).to eq(['/tmp/slugbuilder-cache/buildpacks/heroku__heroku-buildpack-nodejs'])
       buildpacks = [
         'https://github.com/heroku/heroku-buildpack-nodejs.git',
         'https://github.com/heroku/heroku-buildpack-ruby.git'
       ]
       builder.build(buildpacks: buildpacks)
       expect(Dir['/tmp/slugbuilder-cache/buildpacks/*']).to eq([
-        '/tmp/slugbuilder-cache/buildpacks/heroku-buildpack-nodejs',
-        '/tmp/slugbuilder-cache/buildpacks/heroku-buildpack-ruby'
+        '/tmp/slugbuilder-cache/buildpacks/heroku__heroku-buildpack-nodejs',
+        '/tmp/slugbuilder-cache/buildpacks/heroku__heroku-buildpack-ruby'
       ])
+    end
 
+    it 'accepts different buildpack formats and versions' do
+      buildpacks = [
+        'heroku/heroku-buildpack-nodejs',
+        'git@github.com:heroku/heroku-buildpack-ruby.git#5a1ca011c568321077101028a11d24e6e09f1c36'
+      ]
+      builder.build(buildpacks: buildpacks)
+      expect(Dir['/tmp/slugbuilder-cache/buildpacks/*']).to eq([
+        '/tmp/slugbuilder-cache/buildpacks/heroku__heroku-buildpack-nodejs',
+        '/tmp/slugbuilder-cache/buildpacks/heroku__heroku-buildpack-ruby',
+        '/tmp/slugbuilder-cache/buildpacks/heroku__heroku-buildpack-ruby5a1ca011c568321077101028a11d24e6e09f1c36'
+      ])
     end
 
     it 'accepts a prebuild Proc' do

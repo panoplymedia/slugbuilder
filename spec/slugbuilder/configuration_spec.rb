@@ -34,6 +34,7 @@ describe Slugbuilder::Configuration do
       expect(config.output_dir).to eq '.'
       expect(config.git_service).to eq 'github.com'
       expect(config.buildpacks).to eq []
+      expect(config.protocol).to eq 'https'
     end
   end
 end

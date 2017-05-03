@@ -61,11 +61,11 @@ sb.build(clear_cache: true)
 # using a Proc or Proc-like object (responds to `call` method)
 sb = Slugbuilder::Builder.new(repo: 'heroku/node-js-sample', git_ref: 'master')
 class PostBuildInterface
-  def self.call(repo:, git_ref:, stats:, slug:)
+  def self.call(repo:, git_ref:, git_url:, stats:, slug:)
     # postbuild logic
   end
 end
-sb.build(prebuild: ->(repo: repo, git_ref: git_ref) { p "prebuild logic" }, postbuild: PostBuildInterface)
+sb.build(prebuild: ->(repo: repo, git_ref: git_ref, git_url: git_url) { p "prebuild logic" }, postbuild: PostBuildInterface)
 
 # prebuild/postbuild with optional blocks
 sb = Slugbuilder::Builder.new(repo: 'heroku/node-js-sample', git_ref: 'master') do |args|
@@ -84,12 +84,13 @@ You can optionally define a `pre-compile` or `post-compile` script in your appli
 
 ### Builder#initialize(repo:, git_ref:, &block)
 
-- `repo` String (required): the github repo in the form `<organization>/<repository>`
+- `repo` String (required): the github repo in the form `<organization>/<repository_name>`, `https://<git_service>/<organization>/<repository_name>.git`, or `git@<git_service>:<organization>/<repository_name>.git`
 - `git_ref` String (required): the SHA or branch to build
 - `stdout` IO (optional): the IO stream to write build output to. This defaults to `$stdout`
 - `block` Block (optional): an optional block that runs pre-build. It receives a Hash with the structure:
-  - `repo` String: The git repo identifier
+  - `repo` String: The git repo identifier in the form `<organization>/<repository_name>`
   - `git_ref` String: The git branchname or SHA
+  - `git_url` String: The git URL (this will be in the form specified by the `Slugbuilder.config.protocol`)
 
 Alternatively, a Proc can be passed to `build` method's keyword argument `prebuild` to achieve the same effect.
 
@@ -104,11 +105,13 @@ Alternatively, a Proc can be passed to `build` method's keyword argument `prebui
 - `prebuild` Proc (optional): an optional Proc (or anything that conforms to the `call` API of a Proc) that will be run before the build. The Proc will receive a Hash with the structure:
   - `repo` String: The git repo identifier
   - `git_ref` String: The git branchname or SHA
+  - `git_url` String: The git URL (this will be in the form specified by the `Slugbuilder.config.protocol`)
 Alternatively, a block can be passed to the `initialize` method to the same effect.
 - `postbuild` Proc (optional): an optional Proc (or anything that conforms to the `call` API of a Proc) that will run post-build. The Proc will receive a Hash with the structure:
   - `slug` String: Location of the built slug file
   - `repo` String: The git repo identifier
   - `git_ref` String: The git branchname or SHA
+  - `git_url` String: The git URL (this will be in the form specified by the `Slugbuilder.config.protocol`)
   - `git_sha` String: The git SHA (even if the git ref was a branch name)
   - `request_id` String: The unique id of the build request
   - `stats` Hash:
@@ -143,8 +146,9 @@ Slugbuilder.config.output_dir = './slugs'
 @cache_dir = '/tmp/slugbuilder-cache'
 @output_dir = './slugs'
 @git_service = 'github.com'
+@protocol = 'https'
 @buildpacks = [
-  'https://github.com/heroku/heroku-buildpack-nodejs.git',
+  'git@github.com:heroku/heroku-buildpack-nodejs.git',
   'https://github.com/heroku/heroku-buildpack-ruby.git#37ed188'
 ]
 ```
@@ -172,6 +176,12 @@ This is where slug files are built to.
 This is where the git repositories live (github.com, gitlab.com, bitbucket.org, etc)
 
 > Defaults to `github.com`
+
+**protocol**
+
+The protocol that should be used to pull down git repositories (including buildbpacks). This can be either `https` or `ssh`
+
+> Defaults to `https` (also uses `https` if `protocol` is not valid)
 
 **buildpacks**
 
