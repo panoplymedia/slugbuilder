@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.0 (2017-5-3)
+
+Changed:
+
+- Prebuild and postbuild hooks now take `git_url` as a keyword argument
+
+Added:
+
+- The `protocol` configuration option allows specifying the protocol to use when downloading git repositories
+- Buildpack  and repository urls now accept more formats (`<organization>/<repository_name>`, `git@<git_service>:<organization>/<repository_name>.git`, and `https://<git_service>/<organization>/<repository_name>.git`
+
 ## 1.3.0 (2017-3-7)
 
 Added:
