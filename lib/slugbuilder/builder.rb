@@ -211,7 +211,10 @@ module Slugbuilder
     def run_hook(hook_name)
       Dir.chdir(@build_dir) do
         script = "#{@build_dir}/bin/#{hook_name}"
-        run(script) if File.exists?(script)
+        if File.exists?(script)
+          rc = run(script)
+          fail "Failed to run #{script}" if rc != 0
+        end
       end
     end
 
@@ -246,7 +249,7 @@ module Slugbuilder
       end
       release_file.close
 
-      fail "Couldn't compile application using buildpack #{buildpack}" if rc != 0
+      fail "Couldn't release application using buildpack #{buildpack}" if rc != 0
     end
 
     def build_slug
@@ -282,6 +285,7 @@ module Slugbuilder
 
     def normalize_git_url(url)
       matches = parse_git_url(url)
+      fail "Invalid buildpack url: #{url}." unless matches
       if Slugbuilder.config.protocol == 'ssh'
         "git@#{matches[:host] || Slugbuilder.config.git_service}:#{matches[:org]}/#{matches[:name]}.git"
       else
