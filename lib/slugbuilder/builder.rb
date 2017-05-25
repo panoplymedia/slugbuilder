@@ -7,17 +7,17 @@ module Slugbuilder
   class Builder
     def initialize(repo:, git_ref:, stdout: $stdout)
       @stdout = stdout
-      @base_dir = Slugbuilder.config.base_dir
+      @base_dir = Shellwords.escape(Slugbuilder.config.base_dir)
       @cache_dir = Shellwords.escape(Slugbuilder.config.cache_dir)
-      @output_dir = Slugbuilder.config.output_dir
-      @buildpacks_dir = File.join(@cache_dir, 'buildpacks')
+      @output_dir = Shellwords.escape(Slugbuilder.config.output_dir)
+      @buildpacks_dir = File.join(@base_dir, 'buildpacks')
       @env_dir = File.join(@base_dir, 'environment')
       repo_matches = parse_git_url(repo)
       @repo = "#{repo_matches[:org]}/#{repo_matches[:name]}"
       @git_url = normalize_git_url(repo)
       @git_ref = git_ref
-      @git_dir = Shellwords.escape(File.join(@base_dir, 'git', @repo))
-      @build_dir = Shellwords.escape(File.join(@base_dir, @repo, git_ref))
+      @git_dir = File.join(@base_dir, 'git', @repo)
+      @build_dir = File.join(@base_dir, @repo, git_ref)
 
       setup
 
@@ -83,6 +83,8 @@ module Slugbuilder
 
     def wipe_cache
       FileUtils.rm_rf(@cache_dir)
+      FileUtils.rm_rf(@buildpacks_dir)
+      FileUtils.mkdir_p(@cache_dir)
       FileUtils.mkdir_p(@buildpacks_dir)
     end
 
@@ -136,6 +138,7 @@ module Slugbuilder
     end
 
     def create_dirs
+      FileUtils.mkdir_p(@cache_dir)
       FileUtils.mkdir_p(@base_dir)
       FileUtils.mkdir_p(@buildpacks_dir)
       FileUtils.mkdir_p(@output_dir)
