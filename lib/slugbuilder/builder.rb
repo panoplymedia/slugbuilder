@@ -199,7 +199,7 @@ module Slugbuilder
         # checkout hash
         if buildpack_matches[:hash]
           Dir.chdir("#{@buildpacks_dir}/#{buildpack_name}") do
-            rc = run("git checkout --quiet #{buildpack_matches[:hash]} && git reset origin --hard && git pull --quiet")
+            rc = run("git fetch --quiet --all && git checkout --quiet #{buildpack_matches[:hash]} && git reset origin --hard && git pull --quiet")
             fail "Failed to fetch and checkout: #{buildpack_matches[:hash]}" if rc != 0
           end
         end
