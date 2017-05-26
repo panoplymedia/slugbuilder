@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.2 (2017-5-26)
+
+Fixed:
+
+- Move location of buildpack caching to prevent buildpacks that try to clear the entire cache directory from deleting themselves in the middle of running. [7e444e1](../../commit/7e444e1)
+
+Added:
+
+- Improved error messaging [209eead](../../commit/209eead)
+
 ## 2.0.1 (2017-5-25)
 
 Fixed:
