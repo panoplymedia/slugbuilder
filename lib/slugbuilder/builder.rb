@@ -33,7 +33,7 @@ module Slugbuilder
       FileUtils.mkdir_p(@env_dir)
 
       @buildpacks = buildpacks
-      @env = env
+      @env = env.map { |k, v| [k.to_s, v.to_s] }.to_h
       @slug_file = slug_name ? "#{slug_name}.tgz" : Shellwords.escape("#{@repo.gsub('/', '.')}.#{@git_ref}.#{@git_sha}.tgz")
       wipe_cache if clear_cache
 
@@ -132,7 +132,7 @@ module Slugbuilder
       ENV['APP_DIR'] = @build_dir
 
       stitle('Build environment')
-      ENV.each do |k, v|
+      ENV.to_h.merge(@env).each do |k, v|
         stext("#{k}=#{v}")
       end
     end
