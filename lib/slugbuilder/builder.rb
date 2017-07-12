@@ -2,6 +2,7 @@ require 'securerandom'
 require 'shellwords'
 require 'yaml'
 require 'fileutils'
+require 'open3'
 
 module Slugbuilder
   class Builder
@@ -61,7 +62,7 @@ module Slugbuilder
       end
       return true
     rescue => e
-      stitle("Failed: #{e}\n#{e.backtrace.join("\n")}")
+      stitle("Failed: #{e}\n")
       return false
     ensure
       restore_env
@@ -212,8 +213,8 @@ module Slugbuilder
       Dir.chdir(@build_dir) do
         script = "#{@build_dir}/bin/#{hook_name}"
         if File.exists?(script)
-          rc = run(script)
-          fail "Failed to run #{script}" if rc != 0
+          rc, errs = run_echo(script)
+          fail "#{errs.join('\n')}\nFailed to run #{script}" if rc != 0
         end
       end
     end
@@ -237,8 +238,8 @@ module Slugbuilder
     end
 
     def compile(buildpack)
-      rc = run_echo("#{buildpack}/bin/compile '#{@build_dir}' '#{@cache_dir}' '#{@env_dir}'")
-      fail "Couldn't compile application using buildpack #{buildpack}" if rc != 0
+      rc, errs = run_echo("#{buildpack}/bin/compile '#{@build_dir}' '#{@cache_dir}' '#{@env_dir}'")
+      fail "#{errs.join('\n')}\nCouldn't compile application using buildpack #{buildpack}" if rc != 0
     end
 
     def release(buildpack)
@@ -254,14 +255,15 @@ module Slugbuilder
 
     def build_slug
       rc = 1
+      errs = []
       # use pigz if available
       compression = `which pigz` != '' ? '--use-compress-program=pigz' : ''
       if File.exists?("#{@build_dir}/.slugignore")
-        rc = run_echo("tar --exclude='.git' #{compression} -X #{@build_dir}/.slugignore -C #{@build_dir} -cf #{File.join(@output_dir, @slug_file)} .")
+        rc, errs = run_echo("tar --exclude='.git' #{compression} -X #{@build_dir}/.slugignore -C #{@build_dir} -cf #{File.join(@output_dir, @slug_file)} .")
       else
-        rc = run_echo("tar --exclude='.git' #{compression} -C #{@build_dir} -cf #{File.join(@output_dir, @slug_file)} .")
+        rc, errs = run_echo("tar --exclude='.git' #{compression} -C #{@build_dir} -cf #{File.join(@output_dir, @slug_file)} .")
       end
-      fail "Couldn't create slugfile" if rc != 0
+      fail "#{errs.join('\n')}\nCouldn't create slugfile" if rc != 0
     end
 
     def slug_size
@@ -329,20 +331,24 @@ module Slugbuilder
     end
 
     def run(cmd)
-      IO.popen(cmd) do |io|
-        until io.eof?
-          data = io.gets
-          yield data if block_given?
+      Open3.popen3(cmd) do |stdin, stdout, stderr, thread|
+        until stdout.eof? && stderr.eof?
+          out = stdout.gets
+          err = stderr.gets
+          yield(out, err) if block_given?
         end
+        thread.value.exitstatus
       end
-      $?.exitstatus
     end
 
     def run_echo(cmd)
-      run(cmd) do |line|
-        build_output << line
-        @stdout.print(line)
+      errors = []
+      status = run(cmd) do |stdout, stderr|
+        build_output << stdout if stdout
+        errors << stderr if stderr
+        @stdout.print(stdout)
       end
+      [status, errors]
     end
 
     def load_export_env(file)
