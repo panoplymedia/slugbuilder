@@ -120,7 +120,7 @@ module Slugbuilder
     def set_environment
       load_env_file("#{@cache_dir}/env")
       load_env_file("#{@build_dir}/.env")
-      ENV['STACK'] = 'cedar-14'
+      ENV['STACK'] = Slugbuilder.config.heroku_stack
       @request_id = SecureRandom.urlsafe_base64(32)
       ENV['REQUEST_ID'] = @request_id
       ENV['SOURCE_VERSION'] = @git_sha

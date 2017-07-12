@@ -151,6 +151,7 @@ Slugbuilder.config.output_dir = './slugs'
   'git@github.com:heroku/heroku-buildpack-nodejs.git',
   'https://github.com/heroku/heroku-buildpack-ruby.git#37ed188'
 ]
+@heroku_stack = 'heroku-16'
 ```
 
 **base_dir**
@@ -188,6 +189,12 @@ The protocol that should be used to pull down git repositories (including buildb
 Buildpacks is an array of valid git clone-able [buildpack](https://devcenter.heroku.com/articles/buildpacks) URLs. Buildpacks should be in the form `<organization>/<repository_name>`, `https://<git_service>/<organization>/<repository_name>.git`, or `git@<git_service>:<organization>/<repository_name>.git`
 
 > Defaults to []
+
+**heroku_stack**
+
+This is a string configuration option that may affect how certain buildpacks run. It is set as the `$STACK` environment variable. See [Heroku's documentation](https://devcenter.heroku.com/articles/stack) for more information about where this comes from. eg: 'heroku-16', 'cedar-14'
+
+> Defaults to 'heroku-16'
 
 ## Development
 

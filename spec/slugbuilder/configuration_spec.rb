@@ -35,6 +35,7 @@ describe Slugbuilder::Configuration do
       expect(config.git_service).to eq 'github.com'
       expect(config.buildpacks).to eq []
       expect(config.protocol).to eq 'https'
+      expect(config.heroku_stack).to eq 'heroku-16'
     end
   end
 end
