@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.0.0 (2017-7-12)
+
+Changed:
+
+  - Allow configuration of `STACK` environment variable. Now defaults to `heroku-16` instead of `cedar-14`. This is a potentially breaking change. [4ce8c61](../../commit/4ce8c61)
+
+Added:
+
+  - Improved error messaging from buildpacks. Rather than showing the stack trace from slugbuilder, show the data piped to stderr where the error occurred. [dbf5142](../../commit/dbf5142)
+
 ## 2.0.2 (2017-5-26)
 
 Fixed:
