@@ -9,11 +9,11 @@ module Slugbuilder
     def initialize(repo:, git_ref:, stdout: $stdout)
       @stdout = stdout
       @base_dir = Shellwords.escape(Slugbuilder.config.base_dir)
-      @cache_dir = Shellwords.escape(Slugbuilder.config.cache_dir)
       @output_dir = Shellwords.escape(Slugbuilder.config.output_dir)
       @buildpacks_dir = File.join(@base_dir, 'buildpacks')
       repo_matches = parse_git_url(repo)
       @repo = "#{repo_matches[:org]}/#{repo_matches[:name]}"
+      @cache_dir = File.join(Shellwords.escape(Slugbuilder.config.cache_dir), @repo)
       @env_dir = File.join(@base_dir, 'environment', SecureRandom.hex)
       @git_url = normalize_git_url(repo)
       @git_ref = git_ref

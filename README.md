@@ -162,7 +162,7 @@ This is the base directory that builds and apps are stored in.
 
 **cache_dir**
 
-This is the directory where the cache lives.
+This is the directory where the cache lives. Each repo has its own cache (eg. `cache-dir/org/repo`)
 
 > Defaults to `/tmp/slugbuilder-cache`
 
