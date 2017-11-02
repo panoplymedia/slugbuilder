@@ -12,13 +12,13 @@ module Slugbuilder
       @cache_dir = Shellwords.escape(Slugbuilder.config.cache_dir)
       @output_dir = Shellwords.escape(Slugbuilder.config.output_dir)
       @buildpacks_dir = File.join(@base_dir, 'buildpacks')
-      @env_dir = File.join(@base_dir, 'environment')
       repo_matches = parse_git_url(repo)
       @repo = "#{repo_matches[:org]}/#{repo_matches[:name]}"
+      @env_dir = File.join(@base_dir, 'environment', SecureRandom.hex)
       @git_url = normalize_git_url(repo)
       @git_ref = git_ref
       @git_dir = File.join(@base_dir, 'git', @repo)
-      @build_dir = File.join(@base_dir, @repo, git_ref)
+      @build_dir = File.join(@base_dir, @repo, git_ref, SecureRandom.hex)
 
       setup
 
@@ -29,13 +29,11 @@ module Slugbuilder
 
     def build(clear_cache: false, env: {}, prebuild: nil, postbuild: nil, slug_name: nil, buildpacks: Slugbuilder.config.buildpacks)
       @old_env = ENV.to_h
-      # clear environment from previous builds
-      FileUtils.rm_rf(@env_dir)
       FileUtils.mkdir_p(@env_dir)
 
       @buildpacks = buildpacks
       @env = env.map { |k, v| [k.to_s, v.to_s] }.to_h
-      @slug_file = slug_name ? "#{slug_name}.tgz" : Shellwords.escape("#{@repo.gsub('/', '.')}.#{@git_ref}.#{@git_sha}.tgz")
+      @slug_file = slug_name ? "#{slug_name}.tgz" : Shellwords.escape("#{@repo.gsub('/', '.')}.#{@git_ref}.#{@git_sha}.#{SecureRandom.hex}.tgz")
       wipe_cache if clear_cache
 
       prebuild.call(repo: @repo, git_ref: @git_ref, git_url: @git_url) if prebuild
@@ -60,6 +58,10 @@ module Slugbuilder
       if block_given?
         yield(repo: @repo, git_ref: @git_ref, git_sha: @git_sha, git_url: @git_url, request_id: @request_id, stats: stats, slug: File.join(@output_dir, @slug_file))
       end
+
+      # clear environment and build
+      FileUtils.rm_rf(@env_dir)
+      FileUtils.rm_rf(@build_dir)
       return true
     rescue => e
       stitle("Failed: #{e}\n")
@@ -143,8 +145,6 @@ module Slugbuilder
       FileUtils.mkdir_p(@base_dir)
       FileUtils.mkdir_p(@buildpacks_dir)
       FileUtils.mkdir_p(@output_dir)
-      # clear old build
-      FileUtils.rm_rf(@build_dir)
       FileUtils.mkdir_p(File.join(@build_dir, '.profile.d'))
     end
 

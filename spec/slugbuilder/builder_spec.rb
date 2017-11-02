@@ -32,10 +32,13 @@ describe Slugbuilder::Builder do
     end
 
     it 'pulls down git repo and copies to build directory' do
-      expect(Dir['/tmp/slugbuilder/**/**']).to include(
-        '/tmp/slugbuilder/git/jdlehman/node-js-sample/app.json',
-        '/tmp/slugbuilder/jdlehman/node-js-sample/master/app.json'
-      )
+      allow(SecureRandom).to receive(:hex) { 'hex' }
+      Slugbuilder::Builder.new(repo: repo, git_ref: 'master', stdout: StringIO.new) do
+        expect(Dir['/tmp/slugbuilder/**/**']).to include(
+          '/tmp/slugbuilder/git/jdlehman/node-js-sample/app.json',
+          '/tmp/slugbuilder/jdlehman/node-js-sample/master/hex/app.json'
+        )
+      end
     end
 
     it 'accepts a prebuild block' do
@@ -81,15 +84,18 @@ describe Slugbuilder::Builder do
     end
 
     it 'allows setting the env' do
-      builder.build(env: {TEST_ENV: 'something', ANOTHER_ONE: 3})
-      expect(Dir['/tmp/slugbuilder/environment/*']).to eq(['/tmp/slugbuilder/environment/ANOTHER_ONE', '/tmp/slugbuilder/environment/TEST_ENV'])
-      expect(IO.read('/tmp/slugbuilder/environment/TEST_ENV')).to eq('something')
-      expect(IO.read('/tmp/slugbuilder/environment/ANOTHER_ONE')).to eq('3')
+      allow(SecureRandom).to receive(:hex) { 'hex' }
+      builder.build(env: {TEST_ENV: 'something', ANOTHER_ONE: 3}) do
+        expect(Dir['/tmp/slugbuilder/environment/hex/*']).to eq(['/tmp/slugbuilder/environment/hex/ANOTHER_ONE', '/tmp/slugbuilder/environment/hex/TEST_ENV'])
+        expect(IO.read('/tmp/slugbuilder/environment/hex/TEST_ENV')).to eq('something')
+        expect(IO.read('/tmp/slugbuilder/environment/hex/NOTHER_ONE')).to eq('3')
+      end
     end
 
     it 'creates environment dir on build' do
-      builder.build
-      expect(Dir['/tmp/slugbuilder/*']).to include('/tmp/slugbuilder/environment')
+      builder.build do
+        expect(Dir['/tmp/slugbuilder/*']).to include('/tmp/slugbuilder/environment')
+      end
     end
 
     it 'allows building without the cache' do
@@ -156,11 +162,13 @@ describe Slugbuilder::Builder do
     end
 
     it 'runs pre-compile and post-compile script if present' do
-      builder.build
-      expect(Dir['/tmp/slugbuilder/jdlehman/node-js-sample/master/*']).to include(
-        '/tmp/slugbuilder/jdlehman/node-js-sample/master/pre-compile-success',
-        '/tmp/slugbuilder/jdlehman/node-js-sample/master/post-compile-success'
-      )
+      allow(SecureRandom).to receive(:hex) { 'hex' }
+      builder.build do
+        expect(Dir['/tmp/slugbuilder/jdlehman/node-js-sample/master/hex/*']).to include(
+          '/tmp/slugbuilder/jdlehman/node-js-sample/master/hex/pre-compile-success',
+          '/tmp/slugbuilder/jdlehman/node-js-sample/master/hex/post-compile-success'
+        )
+      end
     end
   end
 end
