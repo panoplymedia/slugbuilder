@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.1.0 (2017-11-2)
+
+Fixed:
+
+- Avoid collisions on concurrent builds to the same repo. Each build now has its own environment and build output folder. [f3f36aa](../../commit/f3f36aa)
+
+Improved:
+
+- Scope cache to repo. This is more in line with how Heroku handles the cache and might help prevent bad caches. [21dc073](../../commit/21dc073)
+
 ## 3.0.0 (2017-7-12)
 
 Changed:
