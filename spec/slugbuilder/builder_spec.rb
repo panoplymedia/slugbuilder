@@ -74,8 +74,9 @@ describe Slugbuilder::Builder do
     let(:builder) { Slugbuilder::Builder.new(repo: repo, git_ref: 'master', stdout: StringIO.new) }
 
     it 'builds the slug' do
+      allow(SecureRandom).to receive(:hex) { 'hex' }
       builder.build
-      expect(Dir['/tmp/slugs/*']).to include('/tmp/slugs/jdlehman.node-js-sample.master.8edb1341f89cdb692940c8aec9edb53edeaa1bad.tgz')
+      expect(Dir['/tmp/slugs/*']).to include('/tmp/slugs/jdlehman.node-js-sample.master.8edb1341f89cdb692940c8aec9edb53edeaa1bad.hex.tgz')
     end
 
     it 'allows setting the slug_name' do
