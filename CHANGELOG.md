@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.2.0 (2018-04-04)
+
+Fixed:
+
+- Run buildpacks in context of environment (except for the currently running Ruby process). This ensures that any necessary env settings (git, etc) are preserved. [f10b962](../../commit/f10b962)
+
 ## 3.1.0 (2017-11-2)
 
 Fixed:
